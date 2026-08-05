@@ -37,6 +37,25 @@ jobs:
           if [ "$wget_status" -ne 0 ] && [ "$wget_status" -ne 8 ]; then
             exit "$wget_status"
           fi
+
+          while IFS= read -r path; do
+            mkdir -p "snapshot/$(dirname "$path")"
+            curl -fsSL "https://tanzeranderson.com/$path" -o "snapshot/$path"
+          done <<'EOF'
+          assets/images/engineering-hiring-approved.webp
+          assets/images/executive-compensation-texture.webp
+          assets/images/hero-boardroom.webp
+          assets/images/leadership-teams-glass-office.webp
+          assets/images/private-briefing-lantern.webp
+          assets/images/private-client-introduction.jpg
+          assets/images/private-client-introduction.webp
+          assets/images/state-ai-editorial-card.jpg
+          assets/images/state-ai-leadership.webp
+          assets/images/technical-hiring-approved.webp
+          private-client/dashboard.css
+          private-client/dashboard.js
+          EOF
+
           curl -fsSL https://tanzeranderson.com/sitemap.xml -o snapshot/sitemap.xml || true
           curl -fsSL https://tanzeranderson.com/robots.txt -o snapshot/robots.txt || true
           zip -qr current-site-snapshot.zip snapshot
