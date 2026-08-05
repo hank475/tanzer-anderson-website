@@ -46,7 +46,7 @@ jobs:
           )
           ok=0
           for url in "${urls[@]}"; do
-            if curl --retry 3 --retry-all-errors -fL "$url" -o /tmp/hero.webp; then
+            if curl --retry 5 --retry-all-errors --connect-timeout 20 --max-time 120 -fL "$url" -o /tmp/hero.webp; then
               if file /tmp/hero.webp | grep -qi 'webp'; then ok=1; break; fi
             fi
           done
@@ -121,8 +121,8 @@ jobs:
       - name: Verify live site
         shell: bash
         run: |
-          sleep 20
-          curl -fsSL https://tanzeranderson.com/ | grep -q 'contact-details executive-identity'
-          curl -fsSL https://tanzeranderson.com/about/ | grep -q 'Evidence Over Theater'
-          curl -fsSL https://tanzeranderson.com/assets/styles.css | grep -q '#173b63'
+          sleep 25
+          curl --retry 5 --retry-all-errors -fsSL https://tanzeranderson.com/ | grep -q 'contact-details executive-identity'
+          curl --retry 5 --retry-all-errors -fsSL https://tanzeranderson.com/about/ | grep -q 'Evidence Over Theater'
+          curl --retry 5 --retry-all-errors -fsSL https://tanzeranderson.com/assets/styles.css | grep -q '#173b63'
           echo 'DIRECT PRODUCTION RELEASE PASS'
