@@ -20,3 +20,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh workflow run deploy-approved-cosmetic-pass-v2.yml --ref main
+
+# Deployment trigger refresh: 2026-08-05T06:28Z
