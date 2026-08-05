@@ -4,204 +4,242 @@
 **Role:** Recruiting Coordinator  
 **Operating surface:** Interview Operations  
 **Authorized workspaces:** Tanzer Anderson and Alder & Rowe  
-**Objective:** Make excellent coordination the default while minimizing memory work, repetitive follow-up, calendar reconstruction, workspace confusion, and uncertainty.
+**Infrastructure decision:** One Google Workspace account; Alder & Rowe added as a secondary domain  
+**Objective:** Make excellent coordination the default while minimizing memory work, repetitive follow-up, calendar reconstruction, workspace confusion, and wrong-company communication risk.
 
-## 1. Destiny’s job in one sentence
+## 1. Destiny's job in one sentence
 
-Keep candidates, clients, interviewers, and internal teams moving through interviews calmly, accurately, and on time across both companies—while the system surfaces the next action, protects workspace boundaries, and handles routine preparation.
+Keep candidates, clients, interviewers, and internal teams moving through interviews calmly, accurately, and on time across both companies—while the system surfaces the next action, protects company boundaries, and handles routine preparation.
 
-## 2. Dual-workspace operating model
+## 2. Operating model
 
-Destiny receives one governed sign-in and one Interview Operations experience with three scopes:
+Destiny receives one Interview Operations experience with three scopes:
 
-- **All Workspaces:** A triage-only queue showing labeled priorities, deadlines, and counts across Tanzer Anderson and Alder & Rowe.
-- **Tanzer Anderson:** Full permitted coordinator detail, communications, calendars, templates, candidate timelines, exceptions, and reporting for Tanzer Anderson.
-- **Alder & Rowe:** Full permitted coordinator detail, communications, calendars, templates, candidate timelines, exceptions, and reporting for Alder & Rowe.
+- **All Workspaces:** Read-only triage showing labeled priorities, deadlines, counts, owners, and severity across both companies.
+- **Tanzer Anderson:** Permitted Tanzer Anderson detail and actions using Tanzer mailboxes, calendars, templates, Drive locations, and Google Cloud credentials.
+- **Alder & Rowe:** Permitted Alder & Rowe detail and actions using Alder mailboxes, calendars, templates, Drive locations, and Google Cloud credentials.
 
-The current workspace must remain visible on every page and every consequential action. Switching workspaces changes the underlying data scope, approved sender identity, templates, calendars, Drive locations, reporting, escalation path, and audit context.
+The current workspace remains visible on every screen and every consequential confirmation. Switching workspaces changes the underlying data scope, sender identity, templates, calendars, Drive location, reporting, escalation path, OAuth project, and audit context.
 
 ### Non-negotiable separation rules
 
-- Every record carries a required `workspace_id`.
+- Every record, request, event, cache key, notification, export, and audit entry carries a required `workspace_id`.
 - No candidate, client, interview, message, note, attachment, calendar event, report, or search result may appear outside its authorized workspace.
-- External messages are locked to the sender identity and brand belonging to the selected workspace.
-- Copying or moving information between companies requires an explicit authorized workflow; drag-and-drop or silent cross-workspace duplication is prohibited.
-- Search defaults to the active workspace. Cross-workspace search may return only labeled task metadata unless Destiny has explicit permission to view the underlying record.
-- Workspace changes and cross-workspace access attempts are recorded in the event ledger.
-- A stale tab must revalidate the active workspace before any send, calendar write, document share, or status change.
+- External messages are locked to a genuine sender identity belonging to the selected company.
+- All Workspaces cannot send, schedule, share, export, or change status.
+- A stale browser tab must revalidate company, identity, record ownership, and authorization immediately before any write.
+- Copying or moving information between companies requires an explicit, logged, Henry-approved workflow.
+- Workspace changes and blocked cross-workspace attempts are recorded in the event ledger.
 
-## 3. What the system should do for her
+## 3. Selected Google Workspace structure
 
-The program should prepare routine work, detect risk, and explain what matters. Destiny should not have to search through inboxes, compare time zones manually, rebuild interview loops after a cancellation, remember who owes feedback, wonder whether a message was sent, or worry that she is operating under the wrong company.
+Alder & Rowe will be added to the existing Google Workspace account as a **secondary domain**, not a user alias domain and not a separate Workspace tenant.
+
+### Why
+
+- One Admin console and one Workspace billing relationship.
+- No second Workspace tenant subscription.
+- Genuine Alder & Rowe users can sign in under their Alder identity and use that identity for Gmail, Calendar invitations, and Drive sharing.
+- Users from each company can be placed in separate organizational units and groups.
+- The dashboard can preserve one operating experience while enforcing company boundaries.
+
+### Limitation
+
+A single Workspace account still has one top-level administration environment. Policies cannot be assigned directly by domain, and Drive sharing cannot be isolated purely by domain. Organizational units, groups, mailbox separation, Drive permissions, Google Cloud IAM, and server-side `workspace_id` enforcement are therefore mandatory.
+
+## 4. Identity plan
+
+### Tanzer Anderson
+
+- `destiny@tanzeranderson.com`
+- Optional Tanzer aliases or delegated groups: `coordinator@tanzeranderson.com`, `interviews@tanzeranderson.com`, and `scheduling@tanzeranderson.com`
+
+### Alder & Rowe
+
+The recommended minimum production account is:
+
+- `destiny@alderandrowe.com`
+
+Optional Alder role aliases or delegated groups:
+
+- `coordinator@alderandrowe.com`
+- `interviews@alderandrowe.com`
+- `scheduling@alderandrowe.com`
+- `clientservices@alderandrowe.com`
+
+A full Alder mailbox and Calendar identity requires one additional user license on the existing Workspace subscription. It does not require a second Workspace tenant.
+
+### Zero-seat preparation stage
+
+Before the Alder user license is activated, the domain, organizational unit, groups, Cloud Identity Free account, Google Cloud project, IAM, OAuth design, dashboard workspace, and security controls may be prepared. External Alder email, Calendar invitations, and Drive ownership remain disabled until a genuine Alder Workspace user exists.
+
+Do not place Alder aliases inside Destiny's Tanzer mailbox. Do not use automatic cross-domain forwarding, shared passwords, or cross-brand Send Mail As settings.
+
+Destiny uses a separate browser profile for each company account.
+
+## 5. What the system does for Destiny
 
 The system should:
 
-- Consolidate today’s interviews, deadlines, missing confirmations, and exceptions with clear workspace labels.
-- Rank the next best action across both workspaces without exposing unnecessary sensitive detail.
+- Consolidate interviews, deadlines, missing confirmations, and exceptions with visible company labels.
+- Rank the next best action without exposing unnecessary sensitive detail in All Workspaces.
 - Normalize time zones and display candidate-local time.
-- Prepare availability requests, holds, confirmations, reminders, and feedback prompts using the selected workspace’s approved language.
-- Validate workspace, company, role, stage, participants, links, timing, privacy, sender identity, and mobile rendering.
-- Preserve an interview loop during rescheduling when possible.
-- Separate routine safe actions from actions that require Henry or the applicable search lead.
-- Record what changed, which workspace was active, who approved it, what was sent, and whether delivery succeeded.
+- Prepare availability requests, holds, confirmations, reminders, and feedback prompts using the selected company's approved language.
+- Validate workspace, company, role, stage, participants, links, timing, privacy, sender identity, calendar, Drive source, OAuth credential, and mobile rendering.
+- Preserve interview loops during rescheduling when possible.
+- Separate safe coordinator actions from actions requiring Henry or the applicable search lead.
+- Record company, actor, approval basis, request, result, and delivery receipt for every consequential action.
 - Escalate only material exceptions.
 
-## 4. Day-to-day operating rhythm
+## 6. Day-to-day operating rhythm
 
 ### Start of day — 15 minutes
 
 1. Open **All Workspaces**.
-2. Review the recommended next action and all high-severity exceptions, each carrying a visible Tanzer Anderson or Alder & Rowe label.
-3. Enter the relevant workspace before opening sensitive detail or taking action.
-4. Confirm every interview in the next four hours has a valid link, confirmed participants, preparation status, and a feedback owner.
-5. Release approved reminders from the correct sender identity.
-6. Escalate only items marked outside coordinator authority.
+2. Review the recommended next action and high-severity exceptions, each carrying a visible company label.
+3. Enter the correct company workspace before opening sensitive detail or taking action.
+4. Confirm every interview in the next four hours has a valid link, confirmed participants, preparation status, and feedback owner.
+5. Release approved reminders from the correct company identity.
+6. Escalate only items outside coordinator authority.
 
 ### Throughout the day
 
-- Work from the chronological operating list rather than the inbox.
-- Confirm the workspace indicator before every message, calendar write, document share, or status change.
-- Resolve exceptions from the Exception Desk using the recommended remedy and safe-action boundary.
-- Use the Communications Center for every candidate, interviewer, and client message.
-- Keep candidate-sensitive notes within the correct role-based workspace view.
-- Confirm attendance and technical issues immediately after each interview.
-- Trigger feedback prompts and watch the deadline.
+- Work from the dashboard rather than a blended inbox.
+- Confirm the active company before every send, calendar write, document share, or status change.
+- Resolve exceptions through the documented remedy and safe-action boundary.
+- Use the Communications Center for candidate, interviewer, and client messages.
+- Keep candidate-sensitive notes inside the correct company workspace.
+- Record attendance and technical issues immediately after interviews.
+- Trigger feedback prompts and monitor deadlines.
 
 ### End of day — 15 minutes
 
-1. Clear or hand off every open high-severity exception in both workspaces.
-2. Confirm tomorrow morning’s first interviews are ready.
-3. Review overdue feedback and schedule approved reminders.
-4. Verify that all sent communications have delivery receipts or a documented failure.
-5. Leave separate concise handoffs for Tanzer Anderson and Alder & Rowe: what changed, what matters, the recommendation, and who owns the next action.
+1. Clear or hand off every high-severity exception.
+2. Confirm tomorrow morning's first interviews are ready.
+3. Review overdue feedback and approved reminders.
+4. Verify delivery receipts or document failures.
+5. Leave separate Tanzer Anderson and Alder & Rowe handoffs: what changed, why it matters, the recommendation, and the next owner.
 
-## 5. Dashboard modules
+## 7. Dashboard modules
 
 ### Today
 
-Shows the day’s interview sequence, workspace, readiness, deadlines, responsible coordinator, next action, and intervention priority.
+Shows interview sequence, company, readiness, deadlines, owner, next action, and intervention priority.
 
 ### Interviews
 
-Shows each active loop, workspace, stage, participants, confirmations, Meet-link health, preparation, feedback owner, and completion state.
+Shows each active loop, company, stage, participants, confirmations, Meet-link health, preparation, feedback owner, and completion state.
 
 ### Availability
 
-Collects candidate availability, reads permitted free/busy data, normalizes time zones, applies workspace-specific working-hour and buffer rules, and ranks viable slots.
+Reads only permitted free/busy data, normalizes time zones, applies company-specific rules and buffers, and ranks viable slots.
 
 ### Communications
 
-Prepares approved messages with workspace, sender identity, recipient, purpose, timing commitment, approval state, delivery status, and plain-text fallback.
+Shows company, sender identity, recipient, purpose, timing commitment, approval state, delivery status, and plain-text fallback.
 
 ### Exceptions
 
-Prioritizes no common time, cancellation, withdrawal risk, broken links, time-zone mismatch, accommodation requests, missing participants, late feedback, failed communication, policy conflict, wrong-workspace selection, and sender-identity mismatch.
+Prioritizes no common time, cancellation, withdrawal risk, broken links, time-zone mismatch, accommodation requests, missing participants, late feedback, failed delivery, policy conflict, wrong-workspace selection, and sender mismatch.
 
 ### Reporting
 
-Keeps Tanzer Anderson and Alder & Rowe reporting separate. Tracks time to confirmed loop, reschedule frequency, response latency, feedback completion, preventable failures, coordinator intervention minutes, candidate-experience exceptions, and cost per completed loop.
+Keeps company reporting separate while allowing labeled operational aggregates for Henry.
 
-## 6. Authority model
+## 8. Authority model
 
 ### System may prepare automatically
 
-- Draft availability requests using the active workspace’s templates.
-- Draft confirmations and reminders from approved templates.
-- Identify common time slots.
-- Flag conflicts, stale status, missing feedback, invalid links, and workspace mismatches.
-- Prepare tentative holds.
-- Generate separate end-of-day handoffs for each workspace.
+- Approved availability requests, confirmations, reminders, and feedback prompts.
+- Viable common slots.
+- Conflict, stale-state, invalid-link, missing-feedback, and workspace-mismatch alerts.
+- Tentative holds.
+- Separate end-of-day handoffs.
 
 ### Destiny may execute without executive approval
 
-- Send approved routine scheduling communications from the correct workspace identity.
-- Place and release tentative holds within policy.
-- Correct non-material formatting or link errors after validation.
-- Send approved reminders.
-- Record attendance and routine service issues.
-- Apply a documented recovery playbook within its limits.
+- Approved routine scheduling communications from the correct company mailbox.
+- Tentative holds and releases within policy.
+- Non-material formatting or link corrections after validation.
+- Approved reminders.
+- Attendance and routine service records.
+- Documented recovery playbooks within their limits.
 
 ### Henry or the applicable search lead must approve
 
 - Candidate rejection, withdrawal interpretation, or substantive status commitment.
 - Client-facing explanation of a material failure.
-- Changes to interview structure, assessment design, commercial terms, or candidate presentation.
+- Interview design, assessment, commercial-term, or candidate-presentation changes.
 - Recording or transcription activation.
-- Sharing sensitive candidate information outside the approved workspace group.
-- Moving or duplicating records between Tanzer Anderson and Alder & Rowe.
-- Any action outside the documented safe-action boundary.
+- Sensitive information sharing outside the approved company group.
+- Any cross-company record transfer.
+- Any action outside the documented safe boundary.
 
-## 7. Identity and email model
+## 9. Google Cloud structure
 
-Create one primary employee identity for Destiny and grant governed access to both companies. Avoid shared passwords and unmanaged forwarding.
+The single Workspace account produces one Google Cloud organization resource. Company separation is implemented below it.
 
-### Tanzer Anderson identities
+### Folders
 
-- Primary employee identity: `destiny@tanzeranderson.com`
-- Coordinator alias: `coordinator@tanzeranderson.com`
-- Interview operations alias: `interviews@tanzeranderson.com`
-- Scheduling alias: `scheduling@tanzeranderson.com`
+- `Tanzer Anderson`
+- `Alder & Rowe`
 
-### Alder & Rowe identities
+### Production projects
 
-Once the approved Alder & Rowe domain and Workspace structure are confirmed, create either:
+- `tanzer-anderson-operations-prod`
+- `alder-rowe-operations-prod`
 
-- A dedicated Alder & Rowe employee identity federated to Destiny’s sign-in, or
-- Approved Alder & Rowe coordinator, interview, and scheduling aliases delegated to Destiny.
+Each project has separate OAuth clients, service accounts, enabled APIs, secrets, logs, quotas, budgets, IAM groups, and Cloudflare credentials. No company service account receives access to the other company's project.
 
-The system must not guess or synthesize an Alder & Rowe email domain. Production sender identities are activated only after the domain, ownership, retention, and delegation rules are verified.
+A Cloud Identity Free account may be used for Alder Google Cloud-only administration without a Workspace user license. It does not provide Gmail or Calendar.
 
-Destiny’s personal Gmail remains a temporary onboarding contact, not a production operating identity.
+Both projects may use one Cloud Billing account. There is no second Cloud subscription; costs arise only from billable services and usage. The runtime remains on Cloudflare unless a Google Cloud service is deliberately approved.
 
-## 8. Candidate and client experience standard
+## 10. Candidate and client experience standard
 
-Every interaction should be calm, concise, accurate, correctly branded, and easy to act on. Each message should answer:
+Every interaction must be calm, concise, accurate, correctly branded, and easy to act on. It answers:
 
 1. What is happening?
-2. What does the recipient need to do?
+2. What must the recipient do?
 3. By when?
 4. What happens next?
-5. How can they reach Destiny if something changes?
+5. How can they reach Destiny?
 
-No internal codenames, requisition IDs, proprietary scores, audit terminology, migration language, unsupported status claims, or information from the other workspace may appear externally.
+No internal codenames, requisition IDs, proprietary scores, audit terminology, unsupported status claims, or information from the other company may appear externally.
 
-## 9. Production integration plan
+## 11. Production integration plan
 
 ### GitHub
 
-- Keep source control, issues, review, and release history.
-- Use a protected feature branch and draft pull request for the initial implementation.
-- Require review before merge or production deployment.
-- Keep workspace policy and access-control tests in source control.
+- Protected feature branch, reviewable policy, tests, release history, and controlled merge.
 
 ### Cloudflare
 
-- Host the internal application separately from both public websites.
-- Require Cloudflare Access authentication.
-- Use a Worker for policy enforcement and controlled integrations.
-- Use D1 for operational state and an append-only event ledger.
-- Enforce `workspace_id` at the API and query layer, not only in the interface.
-- Do not expose internal routes or data in public site navigation or search indexing.
+- Internal application separated from public sites.
+- Cloudflare Access authentication.
+- Worker-enforced company policy.
+- D1 state with required `workspace_id` and append-only event ledger.
+- No public navigation, indexing, or unauthenticated route.
 
-### Google Cloud / Workspace
+### Google Workspace and Google Cloud
 
-- Use approved OAuth clients and explicit administrative delegation for each company.
-- Connect only the Gmail, Calendar, Drive, Contacts, and Meet permissions required for the approved workflow.
-- Use employee identity and role-based access; avoid shared passwords.
-- Require action receipts and round-trip verification for every write.
-- Validate the selected sender, calendar, Drive location, and Workspace tenant before execution.
+- Alder domain added as Secondary domain.
+- Users separated by organizational unit and groups.
+- Least-privilege OAuth and IAM per company project.
+- Independent mailbox, Calendar, Drive, send, receive, revocation, and round-trip tests.
+- Action receipts for every write.
 
-## 10. Acceptance standard
+## 12. Acceptance standard
 
-The program is ready for Destiny only when:
+The program is ready only when:
 
-- She can identify the highest-risk interview across both companies in under five seconds.
-- She can enter the correct workspace in one action and always see which workspace is active.
-- She can repair a standard reschedule without reconstructing the full loop.
+- Destiny identifies the highest-risk item across both companies within five seconds.
+- The active company is visible on every screen and confirmation.
+- All Workspaces is read-only.
+- Every external action uses the correct mailbox, domain, Calendar identity, template, signature, Drive source, and OAuth project.
+- Tanzer and Alder data cannot leak through lists, search, exports, notifications, cache, browser history, stale tabs, contacts, or attachments.
+- A standard reschedule can be repaired without reconstructing the full loop.
 - Every Meet link is validated before an interview is marked ready.
-- Every external message has one primary action, explicit timing, correct branding, and the correct sender identity.
-- Every consequential write has a workspace, owner, authorization basis, timestamp, and result.
-- Tanzer Anderson and Alder & Rowe records cannot leak into one another through lists, search, exports, notifications, cache, browser history, or stale tabs.
-- Mobile use is practical and accessible.
-- Revoked access stops future use immediately in both workspaces.
-- No production surface claims synchronization before authenticated read/write tests pass independently for each workspace.
+- Every consequential write has a company, actor, authorization basis, timestamp, request, and result.
+- Revoked access stops future use immediately.
+- No production surface claims synchronization until independent read/write and isolation tests pass.
