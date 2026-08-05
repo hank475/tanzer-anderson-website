@@ -1,0 +1,22 @@
+name: Trigger Tanzer production deployment
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/trigger-tanzer-deployment.yml
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch approved production deployment
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy-approved-cosmetic-pass-v2.yml --ref main
