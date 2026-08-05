@@ -1,0 +1,199 @@
+name: Capture current Tanzer Anderson public site
+
+on:
+  push:
+    branches:
+      - cosmetic-pass-crawl
+
+permissions:
+  contents: write
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: cosmetic-pass-crawl
+          fetch-depth: 0
+
+      - name: Crawl current public site
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf current-site-snapshot current-site-snapshot.zip current-site-snapshot-manifest.txt
+          python3 - <<'PY'
+          from __future__ import annotations
+          import hashlib
+          import json
+          import mimetypes
+          import pathlib
+          import re
+          import time
+          import urllib.error
+          import urllib.parse
+          import urllib.request
+          from collections import deque
+          from html.parser import HTMLParser
+
+          ORIGIN = "https://tanzeranderson.com"
+          ALLOWED_HOSTS = {"tanzeranderson.com", "www.tanzeranderson.com"}
+          OUT = pathlib.Path("current-site-snapshot")
+          OUT.mkdir(parents=True, exist_ok=True)
+          MAX_URLS = 600
+          MAX_TOTAL_BYTES = 120 * 1024 * 1024
+          total_bytes = 0
+          fetched: dict[str, dict[str, object]] = {}
+          queue: deque[str] = deque([
+              f"{ORIGIN}/",
+              f"{ORIGIN}/about/",
+              f"{ORIGIN}/insights/",
+              f"{ORIGIN}/robots.txt",
+              f"{ORIGIN}/sitemap.xml",
+          ])
+
+          class LinkParser(HTMLParser):
+              def __init__(self) -> None:
+                  super().__init__()
+                  self.links: list[str] = []
+              def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+                  data = dict(attrs)
+                  for key in ("href", "src", "poster"):
+                      value = data.get(key)
+                      if value:
+                          self.links.append(value)
+                  for key in ("srcset",):
+                      value = data.get(key)
+                      if value:
+                          for part in value.split(","):
+                              candidate = part.strip().split(" ", 1)[0]
+                              if candidate:
+                                  self.links.append(candidate)
+
+          def normalize(url: str, base: str) -> str | None:
+              if not url or url.startswith(("#", "mailto:", "tel:", "data:", "javascript:")):
+                  return None
+              absolute = urllib.parse.urljoin(base, url)
+              parsed = urllib.parse.urlsplit(absolute)
+              if parsed.scheme not in {"http", "https"} or parsed.hostname not in ALLOWED_HOSTS:
+                  return None
+              host = "tanzeranderson.com"
+              path = parsed.path or "/"
+              # Query strings are not needed for this static-site source capture.
+              return urllib.parse.urlunsplit(("https", host, path, "", ""))
+
+          def destination(url: str, content_type: str) -> pathlib.Path:
+              parsed = urllib.parse.urlsplit(url)
+              path = urllib.parse.unquote(parsed.path)
+              if path.endswith("/"):
+                  rel = path.lstrip("/") + "index.html"
+              elif not pathlib.PurePosixPath(path).suffix and content_type.startswith("text/html"):
+                  rel = path.lstrip("/") + "/index.html"
+              else:
+                  rel = path.lstrip("/") or "index.html"
+              return OUT / rel
+
+          def discover_css(text: str, base: str) -> list[str]:
+              values = re.findall(r"url\(\s*(['\"]?)(.*?)\1\s*\)", text, flags=re.I)
+              links = [value for _, value in values]
+              links.extend(re.findall(r"@import\s+(?:url\()?\s*['\"]([^'\"]+)", text, flags=re.I))
+              return [resolved for item in links if (resolved := normalize(item, base))]
+
+          opener = urllib.request.build_opener()
+          opener.addheaders = [
+              ("User-Agent", "Tanzer-Anderson-Cosmetic-QA/1.0 (+https://tanzeranderson.com)"),
+              ("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"),
+          ]
+
+          while queue and len(fetched) < MAX_URLS:
+              url = queue.popleft()
+              if url in fetched:
+                  continue
+              try:
+                  with opener.open(url, timeout=30) as response:
+                      body = response.read()
+                      status = getattr(response, "status", 200)
+                      content_type = response.headers.get_content_type() or "application/octet-stream"
+                      final_url = normalize(response.geturl(), url) or url
+              except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError) as exc:
+                  fetched[url] = {"ok": False, "error": str(exc)}
+                  continue
+
+              total_bytes += len(body)
+              if total_bytes > MAX_TOTAL_BYTES:
+                  raise RuntimeError("Crawl exceeded size safety limit")
+
+              target = destination(final_url, content_type)
+              target.parent.mkdir(parents=True, exist_ok=True)
+              target.write_bytes(body)
+              fetched[url] = {
+                  "ok": True,
+                  "status": status,
+                  "content_type": content_type,
+                  "bytes": len(body),
+                  "saved_as": target.as_posix(),
+                  "sha256": hashlib.sha256(body).hexdigest(),
+              }
+
+              text: str | None = None
+              if content_type.startswith("text/") or content_type in {"application/javascript", "application/json", "application/xml", "image/svg+xml"}:
+                  text = body.decode("utf-8", errors="replace")
+
+              discovered: list[str] = []
+              if text is not None and content_type.startswith("text/html"):
+                  parser = LinkParser()
+                  parser.feed(text)
+                  discovered.extend(resolved for item in parser.links if (resolved := normalize(item, final_url)))
+              if text is not None and content_type == "text/css":
+                  discovered.extend(discover_css(text, final_url))
+              if text is not None and (content_type.endswith("xml") or final_url.endswith("sitemap.xml")):
+                  discovered.extend(
+                      resolved
+                      for item in re.findall(r"<loc>\s*(.*?)\s*</loc>", text, flags=re.I | re.S)
+                      if (resolved := normalize(item, final_url))
+                  )
+              for item in discovered:
+                  if item not in fetched:
+                      queue.append(item)
+
+          manifest = {
+              "captured_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+              "origin": ORIGIN,
+              "url_count": len(fetched),
+              "total_bytes": total_bytes,
+              "files": fetched,
+          }
+          (OUT / "_capture-manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True), encoding="utf-8")
+          PY
+          python3 - <<'PY'
+          import hashlib
+          import pathlib
+          import shutil
+          import time
+
+          archive = shutil.make_archive("current-site-snapshot", "zip", root_dir="current-site-snapshot")
+          path = pathlib.Path(archive)
+          digest = hashlib.sha256(path.read_bytes()).hexdigest()
+          manifest = pathlib.Path("current-site-snapshot-manifest.txt")
+          manifest.write_text(
+              f"captured_at_utc={time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())}\n"
+              f"archive={path.name}\n"
+              f"bytes={path.stat().st_size}\n"
+              f"sha256={digest}\n",
+              encoding="utf-8",
+          )
+          PY
+
+      - name: Commit capture to temporary branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "Tanzer Anderson Site QA"
+          git config user.email "henry@tanzeranderson.com"
+          git add current-site-snapshot.zip current-site-snapshot-manifest.txt
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "chore: store current public-site snapshot for cosmetic QA"
+          git push origin HEAD:cosmetic-pass-crawl
