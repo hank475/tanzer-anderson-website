@@ -51,6 +51,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          python3 -m pip install --quiet pillow
           mkdir -p site/assets/images
           curl -fL --retry 3 --retry-delay 2 \
             'https://drive.usercontent.google.com/download?id=1RqqgQPges-wk-0NXGTuR9DEIDzhL_RCk&export=download&confirm=t' \
