@@ -31,7 +31,7 @@ jobs:
           mkdir -p site
           wget --recursive --level=inf --page-requisites --adjust-extension --convert-links \
             --no-host-directories --domains=tanzeranderson.com,www.tanzeranderson.com \
-            --directory-prefix=site --user-agent='Tanzer-Anderson-Cosmetic-Release/2.0' \
+            --directory-prefix=site --user-agent='Tanzer-Anderson-Cosmetic-Release/2.1' \
             https://tanzeranderson.com/ || test $? -eq 8
           for path in \
             about/ about/principles/ contact/ private-client/ \
@@ -53,7 +53,7 @@ jobs:
           set -euo pipefail
           python3 -m pip install --quiet pillow gdown
           mkdir -p site/assets/images
-          gdown 'https://drive.google.com/uc?id=1RqqgQPges-wk-0NXGTuR9DEIDzhL_RCk' \
+          gdown --fuzzy 'https://drive.google.com/file/d/1RqqgQPges-wk-0NXGTuR9DEIDzhL_RCk/view?usp=sharing' \
             --output site/assets/images/hero-boardroom.webp
           python3 - <<'PY'
           from PIL import Image
