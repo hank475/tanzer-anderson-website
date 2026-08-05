@@ -1,0 +1,128 @@
+name: Deploy cosmetic pass direct fallback
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/deploy-cosmetic-pass-direct.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tanzer-anderson-direct-production-release
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Capture current production
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf site && mkdir -p site
+          wget --recursive --level=inf --page-requisites --adjust-extension --convert-links \
+            --no-host-directories --domains=tanzeranderson.com,www.tanzeranderson.com \
+            --directory-prefix=site https://tanzeranderson.com/ || test $? -eq 8
+          for path in about/ contact/ private-client/search-command/ private-client/candidate-intelligence/ private-client/decisions-outcomes/; do
+            mkdir -p "site/$path"
+            curl -fsSL "https://tanzeranderson.com/$path" -o "site/${path}index.html"
+          done
+
+      - name: Install approved hero without gdown
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p site/assets/images
+          urls=(
+            'https://drive.usercontent.google.com/download?id=1RqqgQPges-wk-0NXGTuR9DEIDzhL_RCk&export=download&confirm=t'
+            'https://drive.google.com/uc?export=download&id=1RqqgQPges-wk-0NXGTuR9DEIDzhL_RCk&confirm=t'
+            'https://lh3.googleusercontent.com/d/1RqqgQPges-wk-0NXGTuR9DEIDzhL_RCk'
+          )
+          ok=0
+          for url in "${urls[@]}"; do
+            if curl --retry 3 --retry-all-errors -fL "$url" -o /tmp/hero.webp; then
+              if file /tmp/hero.webp | grep -qi 'webp'; then ok=1; break; fi
+            fi
+          done
+          test "$ok" = 1
+          cp /tmp/hero.webp site/assets/images/hero-boardroom.webp
+          python3 -m pip install --quiet pillow
+          python3 - <<'PY'
+          from PIL import Image
+          p='site/assets/images/hero-boardroom.webp'
+          with Image.open(p) as im:
+              assert im.width >= 1400 and im.height >= 700, im.size
+              im.convert('RGB').save('site/assets/images/hero-boardroom.jpg', quality=92, optimize=True, progressive=True)
+          PY
+
+      - name: Apply approved cosmetic corrections
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          root=Path('site')
+          home=root/'index.html'
+          t=home.read_text()
+          identity='<div class="contact-details executive-identity"><strong>Henry Anderson</strong><span>Managing Director — Strategy &amp; Business Development</span><a href="mailto:director@tanzeranderson.com">director@tanzeranderson.com</a></div>'
+          t,n=re.subn(r'<div class="contact-details">.*?</div>',identity,t,count=1,flags=re.S)
+          assert n==1
+          home.write_text(t)
+          about=root/'about/index.html'
+          t=about.read_text()
+          for a,b in [('Evidence over theater','Evidence Over Theater'),('Precision over volume','Precision Over Volume'),('No-chase communication','No-Chase Communication')]:
+              t=t.replace(a,b)
+          about.write_text(t)
+          for rel in ['private-client/search-command/index.html','private-client/candidate-intelligence/index.html','private-client/decisions-outcomes/index.html']:
+              p=root/rel; t=p.read_text()
+              m=re.search(r'<div class="client-partner">(.*?)</div>',t,re.S)
+              assert m
+              repl='<div class="client-partner executive-identity"><small>Your Tanzer Anderson Partner</small><strong>Henry Anderson</strong><span>Managing Director — Strategy &amp; Business Development</span><a class="partner-email" href="mailto:director@tanzeranderson.com">director@tanzeranderson.com</a></div>'
+              p.write_text(t[:m.start()]+repl+t[m.end():])
+          PY
+          cat >> site/assets/styles.css <<'CSS'
+          #principles .service-card h3,.content-band.dark#principles .service-card h3{color:#173b63!important}
+          .executive-identity{display:flex;flex-direction:column;align-items:flex-start;width:min(100%,760px)}
+          .executive-identity strong{display:block;margin:0;color:var(--navy);font-family:var(--serif);font-size:clamp(30px,3vw,44px);font-weight:400;letter-spacing:-.025em;line-height:1.05}
+          .executive-identity>span{display:block;margin-top:14px;color:var(--brass);font-size:11px;font-weight:700;letter-spacing:.22em;line-height:1.55;text-transform:uppercase}
+          .executive-identity>a{display:block;margin-top:13px;color:#4d5359;font-size:14px}
+          .contact-details.executive-identity{margin-top:44px}
+          .client-partner.executive-identity{gap:0;padding:32px 34px;background:linear-gradient(140deg,#fcfaf4,#f5eee2);border:1px solid rgba(164,120,46,.28)}
+          .client-partner.executive-identity>small{margin-bottom:17px;color:var(--brass);font-size:9px;font-weight:700;letter-spacing:.18em;text-transform:uppercase}
+          .hero-media img{image-rendering:auto;object-position:54% center}
+          @media(max-width:640px){.executive-identity>span{letter-spacing:.14em}.client-partner.executive-identity{padding:26px 22px}}
+          CSS
+
+      - name: QA
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'contact-details executive-identity' site/index.html
+          grep -q 'Evidence Over Theater' site/about/index.html
+          grep -q '#173b63' site/assets/styles.css
+          test -s site/assets/images/hero-boardroom.jpg
+
+      - name: Deploy production
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          npx --yes wrangler@latest pages deploy site --project-name=tanzer-anderson-site2 --branch=main --commit-dirty=true
+
+      - name: Verify live site
+        shell: bash
+        run: |
+          sleep 20
+          curl -fsSL https://tanzeranderson.com/ | grep -q 'contact-details executive-identity'
+          curl -fsSL https://tanzeranderson.com/about/ | grep -q 'Evidence Over Theater'
+          curl -fsSL https://tanzeranderson.com/assets/styles.css | grep -q '#173b63'
+          echo 'DIRECT PRODUCTION RELEASE PASS'
