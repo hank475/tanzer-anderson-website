@@ -1,0 +1,168 @@
+name: Tanzer production self-heal
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/production-self-heal.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: tanzer-production-self-heal
+  cancel-in-progress: false
+
+jobs:
+  heal-and-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Probe current production
+        id: before
+        shell: bash
+        run: |
+          set +e
+          mkdir -p /tmp/ta deployment-status
+          ts=$(date +%s)
+          curl -fsSL -H 'Cache-Control: no-cache' "https://tanzeranderson.com/?v=$ts" -o /tmp/ta/home-before.html
+          curl -fsSL -H 'Cache-Control: no-cache' "https://tanzeranderson.com/about/?v=$ts" -o /tmp/ta/about-before.html
+          curl -fsSL -H 'Cache-Control: no-cache' "https://tanzeranderson.com/assets/styles.css?v=$ts" -o /tmp/ta/styles-before.css
+          identity=false; principles=false; css=false
+          grep -q 'contact-details executive-identity' /tmp/ta/home-before.html && grep -q 'director@tanzeranderson.com' /tmp/ta/home-before.html && identity=true
+          grep -q 'Evidence Over Theater' /tmp/ta/about-before.html && grep -q 'Precision Over Volume' /tmp/ta/about-before.html && grep -q 'No-Chase Communication' /tmp/ta/about-before.html && principles=true
+          grep -q '#173b63' /tmp/ta/styles-before.css && grep -q 'executive-identity' /tmp/ta/styles-before.css && css=true
+          echo "identity=$identity" >> "$GITHUB_OUTPUT"
+          echo "principles=$principles" >> "$GITHUB_OUTPUT"
+          echo "css=$css" >> "$GITHUB_OUTPUT"
+          if [ "$identity" = true ] && [ "$principles" = true ] && [ "$css" = true ]; then echo 'complete=true' >> "$GITHUB_OUTPUT"; else echo 'complete=false' >> "$GITHUB_OUTPUT"; fi
+
+      - name: Build corrected static production
+        if: steps.before.outputs.complete != 'true'
+        id: build
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf site && mkdir -p site
+          wget --recursive --level=inf --page-requisites --adjust-extension --convert-links \
+            --no-host-directories --domains=tanzeranderson.com,www.tanzeranderson.com \
+            --directory-prefix=site https://tanzeranderson.com/ || test $? -eq 8
+          for path in about/ contact/ private-client/search-command/ private-client/candidate-intelligence/ private-client/decisions-outcomes/; do
+            mkdir -p "site/$path"
+            curl -fsSL "https://tanzeranderson.com/$path" -o "site/${path}index.html"
+          done
+          mkdir -p site/assets/images
+          ok=0
+          for url in \
+            'https://drive.usercontent.google.com/download?id=1RqqgQPges-wk-0NXGTuR9DEIDzhL_RCk&export=download&confirm=t' \
+            'https://drive.google.com/uc?export=download&id=1RqqgQPges-wk-0NXGTuR9DEIDzhL_RCk&confirm=t' \
+            'https://lh3.googleusercontent.com/d/1RqqgQPges-wk-0NXGTuR9DEIDzhL_RCk'; do
+            curl --retry 3 --retry-all-errors -fL "$url" -o /tmp/ta/approved.webp || continue
+            file /tmp/ta/approved.webp | grep -qi webp && ok=1 && break
+          done
+          test "$ok" = 1
+          cp /tmp/ta/approved.webp site/assets/images/hero-boardroom.webp
+          python3 -m pip install --quiet pillow
+          python3 - <<'PY'
+          from pathlib import Path
+          from PIL import Image
+          import re
+          root=Path('site')
+          with Image.open(root/'assets/images/hero-boardroom.webp') as im:
+              assert im.width >= 1400 and im.height >= 700, im.size
+              im.convert('RGB').save(root/'assets/images/hero-boardroom.jpg', quality=92, optimize=True, progressive=True)
+          home=root/'index.html'; t=home.read_text(encoding='utf-8')
+          identity='<div class="contact-details executive-identity"><strong>Henry Anderson</strong><span>Managing Director — Strategy &amp; Business Development</span><a href="mailto:director@tanzeranderson.com">director@tanzeranderson.com</a></div>'
+          t,n=re.subn(r'<div class="contact-details">.*?</div>',identity,t,count=1,flags=re.S); assert n==1
+          home.write_text(t,encoding='utf-8')
+          about=root/'about/index.html'; t=about.read_text(encoding='utf-8')
+          for a,b in [('Evidence over theater','Evidence Over Theater'),('Precision over volume','Precision Over Volume'),('No-chase communication','No-Chase Communication')]: t=t.replace(a,b)
+          about.write_text(t,encoding='utf-8')
+          for rel in ['private-client/search-command/index.html','private-client/candidate-intelligence/index.html','private-client/decisions-outcomes/index.html']:
+              p=root/rel; t=p.read_text(encoding='utf-8'); m=re.search(r'<div class="client-partner">(.*?)</div>',t,re.S); assert m
+              repl='<div class="client-partner executive-identity"><small>Your Tanzer Anderson Partner</small><strong>Henry Anderson</strong><span>Managing Director — Strategy &amp; Business Development</span><a class="partner-email" href="mailto:director@tanzeranderson.com">director@tanzeranderson.com</a></div>'
+              p.write_text(t[:m.start()]+repl+t[m.end():],encoding='utf-8')
+          PY
+          cat >> site/assets/styles.css <<'CSS'
+          /* Tanzer production self-heal */
+          #principles .service-card h3,.content-band.dark#principles .service-card h3{color:#173b63!important}
+          .executive-identity{display:flex;flex-direction:column;align-items:flex-start;width:min(100%,760px)}
+          .executive-identity strong{display:block;margin:0;color:var(--navy);font-family:var(--serif);font-size:clamp(30px,3vw,44px);font-weight:400;letter-spacing:-.025em;line-height:1.05}
+          .executive-identity>span{display:block;margin-top:14px;color:var(--brass);font-size:11px;font-weight:700;letter-spacing:.22em;line-height:1.55;text-transform:uppercase}
+          .executive-identity>a{display:block;margin-top:13px;color:#4d5359;font-size:14px}
+          .contact-details.executive-identity{margin-top:44px}
+          .client-partner.executive-identity{gap:0;padding:32px 34px;background:linear-gradient(140deg,#fcfaf4,#f5eee2);border:1px solid rgba(164,120,46,.28)}
+          .client-partner.executive-identity>small{margin-bottom:17px;color:var(--brass);font-size:9px;font-weight:700;letter-spacing:.18em;text-transform:uppercase}
+          .hero-media img{image-rendering:auto;object-position:54% center}
+          @media(max-width:640px){.executive-identity>span{letter-spacing:.14em}.client-partner.executive-identity{padding:26px 22px}}
+          CSS
+          grep -q 'contact-details executive-identity' site/index.html
+          grep -q 'Evidence Over Theater' site/about/index.html
+          grep -q '#173b63' site/assets/styles.css
+
+      - name: Deploy corrected production
+        if: steps.before.outputs.complete != 'true' && steps.build.outcome == 'success'
+        id: deploy
+        continue-on-error: true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          npx --yes wrangler@latest pages deploy site --project-name=tanzer-anderson-site2 --branch=main --commit-dirty=true
+
+      - name: Verify and record final status
+        if: always()
+        shell: bash
+        env:
+          BEFORE_COMPLETE: ${{ steps.before.outputs.complete }}
+          BUILD_OUTCOME: ${{ steps.build.outcome }}
+          DEPLOY_OUTCOME: ${{ steps.deploy.outcome }}
+        run: |
+          set +e
+          sleep 25
+          mkdir -p /tmp/ta deployment-status
+          ts=$(date +%s)
+          home_code=$(curl -sS -H 'Cache-Control: no-cache' -o /tmp/ta/home-final.html -w '%{http_code}' "https://tanzeranderson.com/?v=$ts")
+          about_code=$(curl -sS -H 'Cache-Control: no-cache' -o /tmp/ta/about-final.html -w '%{http_code}' "https://tanzeranderson.com/about/?v=$ts")
+          css_code=$(curl -sS -H 'Cache-Control: no-cache' -o /tmp/ta/styles-final.css -w '%{http_code}' "https://tanzeranderson.com/assets/styles.css?v=$ts")
+          hero_code=$(curl -sS -H 'Cache-Control: no-cache' -o /tmp/ta/hero-final.jpg -w '%{http_code}' "https://tanzeranderson.com/assets/images/hero-boardroom.jpg?v=$ts")
+          identity=false; principles=false; css=false; hero=false
+          grep -q 'contact-details executive-identity' /tmp/ta/home-final.html && grep -q 'director@tanzeranderson.com' /tmp/ta/home-final.html && identity=true
+          grep -q 'Evidence Over Theater' /tmp/ta/about-final.html && grep -q 'Precision Over Volume' /tmp/ta/about-final.html && grep -q 'No-Chase Communication' /tmp/ta/about-final.html && principles=true
+          grep -q '#173b63' /tmp/ta/styles-final.css && grep -q 'executive-identity' /tmp/ta/styles-final.css && css=true
+          file /tmp/ta/hero-final.jpg | grep -qi 'jpeg' && hero=true
+          overall=false
+          [ "$identity" = true ] && [ "$principles" = true ] && [ "$css" = true ] && [ "$hero" = true ] && overall=true
+          cat > deployment-status/latest.md <<EOF
+          # Tanzer Anderson Production Status
+
+          - Checked at: $(date -u +'%Y-%m-%dT%H:%M:%SZ')
+          - Already complete before run: ${BEFORE_COMPLETE:-unknown}
+          - Build outcome: ${BUILD_OUTCOME:-skipped}
+          - Deploy outcome: ${DEPLOY_OUTCOME:-skipped}
+          - Homepage HTTP: $home_code
+          - About HTTP: $about_code
+          - CSS HTTP: $css_code
+          - Hero HTTP: $hero_code
+          - Correct executive identity live: $identity
+          - Correct About headings live: $principles
+          - Dark-blue principles CSS live: $css
+          - Hero asset served: $hero
+          - Production complete: $overall
+          EOF
+          git config user.name 'Tanzer Production Self-Heal'
+          git config user.email 'actions@users.noreply.github.com'
+          git add deployment-status/latest.md
+          git commit -m "chore: record Tanzer production self-heal status" || true
+          git push origin HEAD:main || true
+          [ "$overall" = true ]
