@@ -1,0 +1,47 @@
+name: Capture public site snapshot artifact
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Mirror current public site
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf snapshot current-site-snapshot.zip
+          mkdir -p snapshot
+          wget \
+            --recursive \
+            --level=inf \
+            --page-requisites \
+            --adjust-extension \
+            --no-host-directories \
+            --domains=tanzeranderson.com,www.tanzeranderson.com \
+            --directory-prefix=snapshot \
+            --user-agent='Tanzer-Anderson-Cosmetic-QA/1.0' \
+            https://tanzeranderson.com/
+          curl -fsSL https://tanzeranderson.com/sitemap.xml -o snapshot/sitemap.xml || true
+          curl -fsSL https://tanzeranderson.com/robots.txt -o snapshot/robots.txt || true
+          zip -qr current-site-snapshot.zip snapshot
+          sha256sum current-site-snapshot.zip > current-site-snapshot.zip.sha256
+
+      - name: Upload capture
+        uses: actions/upload-artifact@v4
+        with:
+          name: current-site-snapshot
+          path: |
+            current-site-snapshot.zip
+            current-site-snapshot.zip.sha256
+          if-no-files-found: error
+          retention-days: 1
