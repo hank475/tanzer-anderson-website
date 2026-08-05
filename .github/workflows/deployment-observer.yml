@@ -1,0 +1,104 @@
+name: Observe Tanzer production deployment
+
+on:
+  workflow_run:
+    workflows:
+      - Deploy approved cosmetic pass v2
+    types:
+      - completed
+
+permissions:
+  contents: write
+
+jobs:
+  verify-and-record:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Verify production and record status
+        env:
+          DEPLOY_RUN_ID: ${{ github.event.workflow_run.id }}
+          DEPLOY_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          DEPLOY_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        shell: bash
+        run: |
+          set -uo pipefail
+          python3 -m pip install --quiet pillow gdown
+          mkdir -p deployment-status /tmp/ta-observer
+
+          home_code=$(curl -sS -o /tmp/ta-observer/home.html -w '%{http_code}' 'https://tanzeranderson.com/?deployment_watch=20260805')
+          about_code=$(curl -sS -o /tmp/ta-observer/about.html -w '%{http_code}' 'https://tanzeranderson.com/about/?deployment_watch=20260805')
+          css_code=$(curl -sS -o /tmp/ta-observer/styles.css -w '%{http_code}' 'https://tanzeranderson.com/assets/styles.css?deployment_watch=20260805')
+          hero_code=$(curl -sS -o /tmp/ta-observer/live-hero.jpg -w '%{http_code}' 'https://tanzeranderson.com/assets/images/hero-boardroom.jpg?deployment_watch=20260805')
+
+          identity=false
+          principles=false
+          principle_css=false
+          hero_match=false
+
+          if [ "$home_code" = "200" ] && grep -q 'contact-details executive-identity' /tmp/ta-observer/home.html && grep -q 'director@tanzeranderson.com' /tmp/ta-observer/home.html; then
+            identity=true
+          fi
+
+          if [ "$about_code" = "200" ] && grep -q 'Evidence Over Theater' /tmp/ta-observer/about.html && grep -q 'Precision Over Volume' /tmp/ta-observer/about.html && grep -q 'No-Chase Communication' /tmp/ta-observer/about.html; then
+            principles=true
+          fi
+
+          if [ "$css_code" = "200" ] && grep -q 'Approved 2026-08-05 cosmetic correction' /tmp/ta-observer/styles.css && grep -q '#3f78b5' /tmp/ta-observer/styles.css; then
+            principle_css=true
+          fi
+
+          if [ "$hero_code" = "200" ]; then
+            gdown 'https://drive.google.com/uc?id=1RqqgQPges-wk-0NXGTuR9DEIDzhL_RCk' --output /tmp/ta-observer/approved.webp >/dev/null 2>&1 || true
+            python3 - <<'PY' >/tmp/ta-observer/hero-result.txt 2>/dev/null || true
+          from PIL import Image, ImageChops, ImageStat
+          from pathlib import Path
+          approved = Path('/tmp/ta-observer/approved.webp')
+          live = Path('/tmp/ta-observer/live-hero.jpg')
+          if not approved.exists() or not live.exists():
+              print('false')
+              raise SystemExit
+          with Image.open(approved) as a, Image.open(live) as b:
+              a = a.convert('RGB')
+              b = b.convert('RGB')
+              if b.size != a.size:
+                  b = b.resize(a.size)
+              diff = ImageChops.difference(a, b)
+              mean = sum(ImageStat.Stat(diff).mean) / 3
+              print('true' if mean < 8 else 'false')
+          PY
+            if grep -q '^true$' /tmp/ta-observer/hero-result.txt; then hero_match=true; fi
+          fi
+
+          overall=false
+          if [ "$DEPLOY_CONCLUSION" = "success" ] && [ "$identity" = "true" ] && [ "$principles" = "true" ] && [ "$principle_css" = "true" ] && [ "$hero_match" = "true" ]; then
+            overall=true
+          fi
+
+          checked_at=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+          cat > deployment-status/latest.md <<EOF
+          # Tanzer Anderson Deployment Status
+
+          - Checked at: $checked_at
+          - Deployment workflow run: $DEPLOY_RUN_ID
+          - Deployment head SHA: $DEPLOY_HEAD_SHA
+          - Deployment conclusion: $DEPLOY_CONCLUSION
+          - Homepage HTTP: $home_code
+          - About HTTP: $about_code
+          - CSS HTTP: $css_code
+          - Hero HTTP: $hero_code
+          - Correct executive identity live: $identity
+          - Correct About headings live: $principles
+          - Dark-blue principles CSS live: $principle_css
+          - Approved hero live: $hero_match
+          - Production complete: $overall
+          EOF
+
+          git config user.name 'Tanzer Deployment Observer'
+          git config user.email 'actions@users.noreply.github.com'
+          git add deployment-status/latest.md
+          git commit -m "chore: record production deployment verification" || exit 0
+          git push origin HEAD:main
