@@ -1,0 +1,263 @@
+name: Deploy approved cosmetic pass
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/deploy-approved-cosmetic-pass.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tanzer-anderson-production-cosmetic-pass
+  cancel-in-progress: false
+
+jobs:
+  build-and-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Capture current production source
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf site
+          mkdir -p site
+          wget --recursive --level=inf --page-requisites --adjust-extension --convert-links \
+            --no-host-directories --domains=tanzeranderson.com,www.tanzeranderson.com \
+            --directory-prefix=site --user-agent='Tanzer-Anderson-Cosmetic-Release/1.0' \
+            https://tanzeranderson.com/ || test $? -eq 8
+          for path in \
+            about/ about/principles/ contact/ private-client/ \
+            private-client/search-command/ private-client/candidate-intelligence/ private-client/decisions-outcomes/ \
+            what-we-do/ what-we-do/executive-search/ what-we-do/professional-staffing/ \
+            what-we-do/talent-advisory/ what-we-do/market-intelligence/ approach/ \
+            who-we-advise/ceos-boards-executive-teams/ who-we-advise/private-equity-portfolio-companies/ \
+            who-we-advise/technology-ai-cybersecurity/ who-we-advise/engineering-industrial-infrastructure/ \
+            who-we-advise/healthcare-financial-consumer/ insights/ privacy/ terms/ accessibility/; do
+            mkdir -p "site/$path"
+            curl -fsSL "https://tanzeranderson.com/$path" -o "site/${path}index.html"
+          done
+          curl -fsSL https://tanzeranderson.com/robots.txt -o site/robots.txt
+          curl -fsSL https://tanzeranderson.com/sitemap.xml -o site/sitemap.xml
+
+      - name: Install approved hero image
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p site/assets/images
+          curl -fL --retry 3 --retry-delay 2 \
+            'https://drive.usercontent.google.com/download?id=1RqqgQPges-wk-0NXGTuR9DEIDzhL_RCk&export=download&confirm=t' \
+            -o site/assets/images/hero-boardroom.webp
+          python3 - <<'PY'
+          from PIL import Image
+          from pathlib import Path
+          p = Path('site/assets/images/hero-boardroom.webp')
+          with Image.open(p) as im:
+              if im.width < 1400 or im.height < 700:
+                  raise SystemExit(f'Approved hero download invalid: {im.size}')
+              im.convert('RGB').save('site/assets/images/hero-boardroom.jpg', quality=90, optimize=True, progressive=True)
+          PY
+
+      - name: Apply typography and principles corrections
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          root = Path('site')
+          home = root / 'index.html'
+          text = home.read_text(encoding='utf-8')
+          identity = '<div class="contact-details executive-identity"><strong>Henry Anderson</strong><span>Managing Director — Strategy &amp; Business Development</span><a href="mailto:director@tanzeranderson.com">director@tanzeranderson.com</a></div>'
+          text, count = re.subn(r'<div class="contact-details">.*?</div>', identity, text, count=1, flags=re.S)
+          if count != 1:
+              raise SystemExit('Homepage identity block not found exactly once')
+          home.write_text(text, encoding='utf-8')
+
+          about = root / 'about/index.html'
+          text = about.read_text(encoding='utf-8')
+          replacements = {
+              'Evidence over theater': 'Evidence Over Theater',
+              'Precision over volume': 'Precision Over Volume',
+              'No-chase communication': 'No-Chase Communication',
+          }
+          for old, new in replacements.items():
+              if old not in text:
+                  raise SystemExit(f'Missing About principle: {old}')
+              text = text.replace(old, new)
+          about.write_text(text, encoding='utf-8')
+
+          partner_paths = [
+              root / 'private-client/search-command/index.html',
+              root / 'private-client/candidate-intelligence/index.html',
+              root / 'private-client/decisions-outcomes/index.html',
+          ]
+          for path in partner_paths:
+              text = path.read_text(encoding='utf-8')
+              match = re.search(r'<div class="client-partner">(.*?)</div>', text, flags=re.S)
+              if not match:
+                  raise SystemExit(f'Partner block missing: {path}')
+              support = re.search(r'<a[^>]*>(Request private support →)</a>', match.group(0), flags=re.S)
+              support_html = support.group(0) if support else ''
+              if support_html:
+                  support_html = support_html.replace('<a ', '<a class="partner-support" ', 1)
+              replacement = (
+                  '<div class="client-partner executive-identity">'
+                  '<small>Your Tanzer Anderson Partner</small>'
+                  '<strong>Henry Anderson</strong>'
+                  '<span>Managing Director — Strategy &amp; Business Development</span>'
+                  '<a class="partner-email" href="mailto:director@tanzeranderson.com">director@tanzeranderson.com</a>'
+                  + support_html
+                  + '</div>'
+              )
+              text = text[:match.start()] + replacement + text[match.end():]
+              path.write_text(text, encoding='utf-8')
+          PY
+
+          cat >> site/assets/styles.css <<'CSS'
+
+          /* Approved 2026-08-05 cosmetic correction */
+          #principles .service-card h3,
+          .content-band.dark#principles .service-card h3 {
+            color: #3f78b5;
+          }
+
+          .executive-identity {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            width: min(100%, 760px);
+          }
+          .executive-identity strong {
+            display: block;
+            margin: 0;
+            color: var(--navy);
+            font-family: var(--serif);
+            font-size: clamp(30px, 3vw, 44px);
+            font-weight: 400;
+            letter-spacing: -.025em;
+            line-height: 1.05;
+          }
+          .executive-identity > span {
+            display: block;
+            margin-top: 14px;
+            color: var(--brass);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: .22em;
+            line-height: 1.55;
+            text-transform: uppercase;
+          }
+          .executive-identity > a,
+          .executive-identity .partner-email {
+            display: block;
+            margin-top: 13px;
+            color: #4d5359;
+            font-size: 14px;
+            letter-spacing: .01em;
+          }
+          .contact-details.executive-identity { margin-top: 44px; }
+          .client-partner.executive-identity {
+            gap: 0;
+            padding: 32px 34px;
+            background: linear-gradient(140deg,#fcfaf4,#f5eee2);
+            border: 1px solid rgba(164,120,46,.28);
+          }
+          .client-partner.executive-identity > small {
+            margin-bottom: 17px;
+            color: var(--brass);
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: .18em;
+            text-transform: uppercase;
+          }
+          .client-partner.executive-identity .partner-support {
+            margin-top: 22px;
+            color: var(--navy);
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+          }
+          .hero-media img {
+            image-rendering: auto;
+            object-position: 54% center;
+          }
+          @media (max-width: 640px) {
+            .executive-identity > span { letter-spacing: .14em; }
+            .client-partner.executive-identity { padding: 26px 22px; }
+          }
+          CSS
+
+      - name: Consolidated QA
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          from PIL import Image
+
+          root = Path('site')
+          required = [
+              root/'index.html', root/'about/index.html', root/'assets/styles.css',
+              root/'assets/images/hero-boardroom.webp', root/'assets/images/hero-boardroom.jpg',
+              root/'private-client/search-command/index.html',
+              root/'private-client/candidate-intelligence/index.html',
+              root/'private-client/decisions-outcomes/index.html',
+          ]
+          missing = [str(p) for p in required if not p.exists() or p.stat().st_size == 0]
+          if missing:
+              raise SystemExit(f'Missing required outputs: {missing}')
+          for image in required[3:5]:
+              with Image.open(image) as im:
+                  if im.width < 1400 or im.height < 700:
+                      raise SystemExit(f'Hero asset too small: {image} {im.size}')
+          home = (root/'index.html').read_text(encoding='utf-8')
+          if home.count('class="contact-details executive-identity"') != 1:
+              raise SystemExit('Homepage identity QA failed')
+          if 'director@tanzeranderson.com' not in home:
+              raise SystemExit('Homepage email QA failed')
+          about = (root/'about/index.html').read_text(encoding='utf-8')
+          for heading in ('Evidence Over Theater','Precision Over Volume','No-Chase Communication'):
+              if heading not in about:
+                  raise SystemExit(f'About heading QA failed: {heading}')
+          css = (root/'assets/styles.css').read_text(encoding='utf-8')
+          for token in ('#principles .service-card h3','.executive-identity strong','.partner-support'):
+              if token not in css:
+                  raise SystemExit(f'CSS QA failed: {token}')
+          print('Cosmetic pass QA: PASS')
+          PY
+
+      - name: Deploy to Cloudflare Pages production
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          npx --yes wrangler@latest pages deploy site --project-name=tanzer-anderson-site2 --branch=main --commit-dirty=true
+
+      - name: Production verification
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        shell: bash
+        run: |
+          set -euo pipefail
+          sleep 15
+          for route in / /about/ /contact/ /private-client/search-command/; do
+            code=$(curl -sS -o /tmp/page -w '%{http_code}' "https://tanzeranderson.com$route")
+            test "$code" = "200"
+          done
+          curl -fsSL https://tanzeranderson.com/ | grep -q 'contact-details executive-identity'
+          curl -fsSL https://tanzeranderson.com/about/ | grep -q 'Evidence Over Theater'
+          echo 'Production cosmetic verification: PASS'
