@@ -19,8 +19,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          rm -rf snapshot current-site-snapshot.zip
+          rm -rf snapshot current-site-snapshot.zip current-site-snapshot.zip.sha256
           mkdir -p snapshot
+          set +e
           wget \
             --recursive \
             --level=inf \
@@ -31,6 +32,11 @@ jobs:
             --directory-prefix=snapshot \
             --user-agent='Tanzer-Anderson-Cosmetic-QA/1.0' \
             https://tanzeranderson.com/
+          wget_status=$?
+          set -e
+          if [ "$wget_status" -ne 0 ] && [ "$wget_status" -ne 8 ]; then
+            exit "$wget_status"
+          fi
           curl -fsSL https://tanzeranderson.com/sitemap.xml -o snapshot/sitemap.xml || true
           curl -fsSL https://tanzeranderson.com/robots.txt -o snapshot/robots.txt || true
           zip -qr current-site-snapshot.zip snapshot
