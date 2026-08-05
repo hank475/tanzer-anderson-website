@@ -1,0 +1,70 @@
+name: Diagnose Cloudflare deployment
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/cloudflare-diagnostic.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Check Cloudflare credentials and project access
+        id: check
+        continue-on-error: true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        shell: bash
+        run: |
+          set +e
+          mkdir -p deployment-status /tmp/ta-cf
+          token_set=false; account_set=false
+          [ -n "$CLOUDFLARE_API_TOKEN" ] && token_set=true
+          [ -n "$CLOUDFLARE_ACCOUNT_ID" ] && account_set=true
+          printf 'token_set=%s\naccount_set=%s\n' "$token_set" "$account_set" > /tmp/ta-cf/secrets.env
+          if [ "$token_set" != true ] || [ "$account_set" != true ]; then
+            echo 'Required Cloudflare secret is missing from GitHub Actions.' > /tmp/ta-cf/result.txt
+            exit 20
+          fi
+          npx --yes wrangler@latest pages project list > /tmp/ta-cf/result.txt 2>&1
+          exit $?
+
+      - name: Record diagnostic
+        if: always()
+        env:
+          CHECK_OUTCOME: ${{ steps.check.outcome }}
+        shell: bash
+        run: |
+          set +e
+          source /tmp/ta-cf/secrets.env 2>/dev/null || true
+          result=$(tail -n 40 /tmp/ta-cf/result.txt 2>/dev/null | sed 's/`/\\`/g')
+          cat > deployment-status/cloudflare-diagnostic.md <<EOF
+          # Cloudflare Deployment Diagnostic
+
+          - Checked at: $(date -u +'%Y-%m-%dT%H:%M:%SZ')
+          - Diagnostic outcome: ${CHECK_OUTCOME:-unknown}
+          - API token configured: ${token_set:-unknown}
+          - Account ID configured: ${account_set:-unknown}
+
+          ## Wrangler result
+
+          ~~~text
+          $result
+          ~~~
+          EOF
+          git config user.name 'Tanzer Cloudflare Diagnostic'
+          git config user.email 'actions@users.noreply.github.com'
+          git add deployment-status/cloudflare-diagnostic.md
+          git commit -m 'chore: record Cloudflare deployment diagnostic' || true
+          git push origin HEAD:main || true
