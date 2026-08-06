@@ -1,0 +1,65 @@
+{
+  "policy_id": "TA_PURE_HTML_V8",
+  "status": "staged_for_internal_visual_qa",
+  "effective_date": "2026-08-06",
+  "scope": "all_first_touch_email_generated_for_henry",
+  "identity": {
+    "display_name": "Henry Anderson",
+    "sender_address": "director@tanzeranderson.com",
+    "reply_to_address": "director@tanzeranderson.com",
+    "title": "Managing Director - Strategy and Business Development"
+  },
+  "modes": {
+    "baseline_safe": {
+      "inner_width_px": 620,
+      "layout": "single_column_table",
+      "default": true
+    },
+    "maximum_safe_html": {
+      "inner_width_px": 680,
+      "layout": "two_column_table_with_pure_html_architectural_panel",
+      "default": false
+    }
+  },
+  "required_content": {
+    "personalized_greeting": true,
+    "opening_prefix": "Rather than send a general agency pitch I’d suggest",
+    "proof_map": true,
+    "role_section_after_proof_map": true,
+    "process_boundary": true,
+    "low_friction_next_step": true,
+    "signature_color": "#0B2A4A",
+    "signature_presentation": "thin_right_slanted_cursive_fallback_stack"
+  },
+  "forbidden": [
+    "attachments",
+    "img_elements",
+    "cid_images",
+    "data_uri_images",
+    "remote_images",
+    "background_images",
+    "web_fonts",
+    "external_stylesheets",
+    "javascript",
+    "flexbox",
+    "css_grid",
+    "absolute_positioning",
+    "css_transforms"
+  ],
+  "delivery": {
+    "mime": "multipart/alternative",
+    "plain_text_part": true,
+    "html_part": true,
+    "multipart_mixed": false,
+    "ordinary_attachments": false,
+    "inline_image_mime_parts": false,
+    "maximum_html_bytes": 50000
+  },
+  "controls": {
+    "external_send_requires_henry_release": true,
+    "automatic_external_send": false,
+    "recipient_route_must_be_verified": true,
+    "gmail_mobile_test_required": true,
+    "outlook_mobile_test_required": true
+  }
+}
