@@ -1,0 +1,164 @@
+name: Deploy Career Guard Private Room
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - cloud/career-guard/**
+      - .github/workflows/deploy-career-guard.yml
+  push:
+    branches: [main]
+    paths:
+      - cloud/career-guard/**
+      - .github/workflows/deploy-career-guard.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: tanzer-anderson-career-guard-production
+  cancel-in-progress: false
+
+jobs:
+  validate-deploy-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      WORKER_NAME: tanzer-anderson-career-guard
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Reconstruct validated Career Guard source
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash cloud/career-guard/reconstruct.sh
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Validate Career Guard
+        working-directory: cloud/career-guard
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm test
+          npm run check
+          npx --yes wrangler@latest deploy --dry-run --config wrangler.jsonc --outdir /tmp/career-guard-dry-run
+          test -s /tmp/career-guard-dry-run/index.js
+
+      - name: Require Cloudflare production credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+
+      - name: Resolve permanent Workers URL
+        shell: bash
+        run: |
+          set -euo pipefail
+          response=$(curl -fsS \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            -H "Content-Type: application/json" \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/subdomain")
+          subdomain=$(python3 -c 'import json,sys; print(json.load(sys.stdin).get("result",{}).get("subdomain", ""))' <<< "$response")
+          test -n "$subdomain"
+          base_url="https://${WORKER_NAME}.${subdomain}.workers.dev"
+          echo "BASE_URL=${base_url}" >> "$GITHUB_ENV"
+          cp cloud/career-guard/wrangler.jsonc /tmp/career-guard.live.jsonc
+          python3 - "$base_url" <<'PY'
+          from pathlib import Path
+          import sys
+          path = Path('/tmp/career-guard.live.jsonc')
+          text = path.read_text(encoding='utf-8')
+          placeholder = 'https://tanzer-anderson-career-guard.example.workers.dev'
+          if placeholder not in text:
+              raise SystemExit('PUBLIC_BASE_URL placeholder missing')
+          path.write_text(text.replace(placeholder, sys.argv[1]), encoding='utf-8')
+          PY
+
+      - name: Derive stable administrative token without logging it
+        shell: bash
+        run: |
+          set -euo pipefail
+          admin=$(printf '%s' "${CLOUDFLARE_API_TOKEN}|${CLOUDFLARE_ACCOUNT_ID}|career-guard-admin-v1" | sha256sum | awk '{print $1}')
+          echo "::add-mask::$admin"
+          echo "ADMIN_TOKEN=$admin" >> "$GITHUB_ENV"
+
+      - name: Deploy Career Guard Worker
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        working-directory: cloud/career-guard
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@latest deploy --config /tmp/career-guard.live.jsonc
+          printf '%s' "$ADMIN_TOKEN" | npx --yes wrangler@latest secret put ADMIN_TOKEN --config /tmp/career-guard.live.jsonc
+
+      - name: Production verification and initial live-source sync
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        shell: bash
+        run: |
+          set -euo pipefail
+          sleep 12
+          curl -fsS "$BASE_URL/health" | tee /tmp/career-health-before.json
+          curl -fsS "$BASE_URL/" | grep -q 'CAREER GUARD'
+          curl -fsS "$BASE_URL/dashboard.html?profile=destiny" | grep -q 'Private Career Room'
+          curl -fsS "$BASE_URL/authorize.html?profile=henry" | grep -q 'One-click authorization'
+          curl -fsS -X POST \
+            -H "Authorization: Bearer ${ADMIN_TOKEN}" \
+            -H "Content-Type: application/json" \
+            "$BASE_URL/api/admin/sync" \
+            -d '{}' | tee /tmp/career-sync.json
+          python3 - <<'PY'
+          import json
+          with open('/tmp/career-sync.json', encoding='utf-8') as handle:
+              result = json.load(handle)
+          assert result['ok'] is True
+          assert result['sync']['sourceCount'] >= 3
+          print(json.dumps(result['sync'], indent=2))
+          PY
+          curl -fsS "$BASE_URL/health" | tee /tmp/career-health-after.json
+          python3 - <<'PY'
+          import json
+          with open('/tmp/career-health-after.json', encoding='utf-8') as handle:
+              health = json.load(handle)
+          assert health['ok'] is True
+          assert health['service'] == 'tanzer-anderson-career-guard'
+          assert health['submissionClaimsEnabled'] is False
+          assert health['lastSync']
+          print(json.dumps(health, indent=2))
+          PY
+
+      - name: Publish deployment receipt
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          JOB_STATUS: ${{ job.status }}
+          RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        shell: bash
+        run: |
+          set +e
+          cat > /tmp/career-guard-receipt.md <<EOF
+          ### Career Guard Private Room deployment — ${JOB_STATUS}
+
+          - Commit: \`${GITHUB_SHA}\`
+          - Run: ${RUN_URL}
+          - Service: ${BASE_URL:-not-deployed}
+          - Candidate workspaces: Destiny and Henry, isolated by private access token
+          - Source refresh: every six hours; direct ATS plus attributed remote-job APIs
+          - Part-time / fractional mix: enabled for both profiles
+          - Tailoring: job-specific headline, summary, capability order, cover letter, answer rules, and generated ATS DOCX resume
+          - Authorization: standing record plus one-click private renewal
+          - Submission posture: authenticated executor pending; no unsupported submission claim
+          - Recorded: $(date -u +'%Y-%m-%d %H:%M:%S UTC')
+          EOF
+          gh issue comment 6 --repo "$GITHUB_REPOSITORY" --body-file /tmp/career-guard-receipt.md || true
+          cat /tmp/career-guard-receipt.md >> "$GITHUB_STEP_SUMMARY"
