@@ -1,0 +1,67 @@
+{
+  "henry": {
+    "title": "Daily Executive Briefing",
+    "summary": "Independent continuity briefing. This GitHub-native fallback remains available when the Cloudflare email service or ChatGPT is unavailable.",
+    "topPriorities": [
+      "Complete the independent daily briefing production deployment",
+      "Connect the governed Google Workspace source before the 7:15 AM send",
+      "Maintain the external-outreach hold until wrapped-email QA passes"
+    ],
+    "decisions": [
+      {
+        "id": "A1",
+        "text": "Restore the Cloudflare API token and account ID to GitHub Actions"
+      },
+      {
+        "id": "A2",
+        "text": "Complete Cloudflare Email Service onboarding and recipient verification"
+      },
+      {
+        "id": "A3",
+        "text": "Keep external outreach paused until the wrapped-email release gate passes"
+      }
+    ],
+    "risks": [
+      "The Cloudflare runtime is not live while the deployment credentials remain unavailable",
+      "Email delivery cannot be claimed until Email Service and both destinations are verified",
+      "No briefing approval authorizes an external campaign release unless the separate governing release gate permits it"
+    ],
+    "nextActions": [
+      {
+        "id": "A4",
+        "text": "Review the approve-all, approve-selected, and individual approval controls"
+      },
+      {
+        "id": "A5",
+        "text": "Connect the governed approval executor after the final safety review"
+      }
+    ]
+  },
+  "destiny": {
+    "title": "Daily Coordinator Briefing",
+    "summary": "Separate coordinator continuity briefing. Henry's private calendar and private decision data are not copied into this lane by default.",
+    "topPriorities": [
+      "Review the coordinator queue and surface decisions requiring Henry",
+      "Protect candidate, client, and meeting follow-through from missed handoffs"
+    ],
+    "decisions": [
+      {
+        "id": "D1",
+        "text": "Keep external outreach on hold until Henry releases the wrapped-email standard"
+      }
+    ],
+    "risks": [
+      "Do not treat unverified queue or calendar data as a live commitment"
+    ],
+    "nextActions": [
+      {
+        "id": "D2",
+        "text": "Complete the morning coordinator queue review"
+      },
+      {
+        "id": "D3",
+        "text": "Escalate decision-ready exceptions to Henry"
+      }
+    ]
+  }
+}
