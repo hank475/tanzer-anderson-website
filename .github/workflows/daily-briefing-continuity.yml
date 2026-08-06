@@ -104,7 +104,15 @@ jobs:
           PY
 
           title=$(cat /tmp/briefing-title.txt)
-          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state all --search "$title in:title" --json number,title --limit 20 --jq '.[] | select(.title == $title) | .number' --arg title "$title" | head -n 1)
+          gh issue list --repo "$GITHUB_REPOSITORY" --state all --search "$title in:title" --json number,title --limit 20 > /tmp/issues.json
+          existing=$(TITLE="$title" python3 - <<'PY'
+          import json, os
+          with open('/tmp/issues.json', encoding='utf-8') as f:
+              issues = json.load(f)
+          title = os.environ['TITLE']
+          print(next((str(item['number']) for item in issues if item.get('title') == title), ''))
+          PY
+          )
           if [ -n "$existing" ]; then
             gh issue edit "$existing" --repo "$GITHUB_REPOSITORY" --title "$title" --body-file /tmp/briefing-body.md
             gh issue reopen "$existing" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 || true
