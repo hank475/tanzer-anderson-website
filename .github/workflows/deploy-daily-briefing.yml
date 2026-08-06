@@ -38,15 +38,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-          cache-dependency-path: cloud/daily-briefing/package.json
-
-      - name: Validate required account credentials
-        shell: bash
-        run: |
-          set -euo pipefail
-          test -n "$CLOUDFLARE_API_TOKEN"
-          test -n "$CLOUDFLARE_ACCOUNT_ID"
 
       - name: Run consolidated briefing QA
         working-directory: cloud/daily-briefing
@@ -56,10 +47,30 @@ jobs:
           npm test
           node --check src/lib.js
           node --check src/index.js
+          for source in apps-script/*.gs; do
+            target="/tmp/$(basename "$source" .gs).js"
+            cp "$source" "$target"
+            node --check "$target"
+          done
+          python3 -m json.tool apps-script/appsscript.json >/dev/null
           npx --yes wrangler@latest deploy --dry-run --config wrangler.preview.toml --outdir /tmp/ta-briefing-dry-run
           test -s /tmp/ta-briefing-dry-run/index.js
 
+      - name: Detect Cloudflare deployment credentials
+        id: cf
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -n "$CLOUDFLARE_API_TOKEN" ] && [ -n "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo 'available=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'available=false' >> "$GITHUB_OUTPUT"
+            echo 'DEPLOY_MODE=blocked-credentials' >> "$GITHUB_ENV"
+            echo 'Cloudflare deployment credentials are unavailable; QA passed and deployment was held.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Resolve permanent Workers URL and prepare configs
+        if: steps.cf.outputs.available == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -88,6 +99,7 @@ jobs:
           PY
 
       - name: Derive stable runtime secrets without logging them
+        if: steps.cf.outputs.available == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -107,6 +119,7 @@ jobs:
           } >> "$GITHUB_ENV"
 
       - name: Attempt live Email Service deployment, fail safely to preview
+        if: steps.cf.outputs.available == 'true'
         working-directory: cloud/daily-briefing
         shell: bash
         run: |
@@ -127,6 +140,7 @@ jobs:
           fi
 
       - name: Install stable approval and control secrets
+        if: steps.cf.outputs.available == 'true'
         working-directory: cloud/daily-briefing
         shell: bash
         run: |
@@ -137,6 +151,7 @@ jobs:
           printf '%s' "$WEBHOOK_SECRET" | npx --yes wrangler@latest secret put APPROVAL_WEBHOOK_SECRET --config "$ACTIVE_CONFIG"
 
       - name: Verify deployed service
+        if: steps.cf.outputs.available == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -156,7 +171,7 @@ jobs:
           curl -fsS "$BASE_URL/select" | grep -q 'Review action items'
 
       - name: Optional controlled send
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.send_test }}
+        if: ${{ steps.cf.outputs.available == 'true' && github.event_name == 'workflow_dispatch' && inputs.send_test }}
         shell: bash
         run: |
           set -euo pipefail
@@ -167,21 +182,25 @@ jobs:
             -d '{}' | tee /tmp/ta-briefing-send.json
 
       - name: Publish deployment receipt
+        if: always()
         shell: bash
         run: |
           set -euo pipefail
-          email_state="PREVIEW — Cloudflare Email Service onboarding or destination verification remains required"
-          if [ "$DEPLOY_MODE" = "live" ]; then
-            email_state="LIVE — Cloudflare Email Service binding deployed"
-          fi
+          mode="${DEPLOY_MODE:-not-reached}"
+          service_url="${BASE_URL:-not-deployed}"
+          email_state="NOT LIVE"
+          if [ "$mode" = "live" ]; then email_state="LIVE — Cloudflare Email Service binding deployed"; fi
+          if [ "$mode" = "preview" ]; then email_state="PREVIEW — Email Service activation remains required"; fi
           {
             echo '## Tanzer Anderson Independent Daily Briefing'
             echo
-            echo "- Service: ${BASE_URL}"
-            echo '- Schedule: 7:15 AM America/Chicago every day'
+            echo '- QA: completed before deployment gating'
+            echo "- Service: ${service_url}"
+            echo '- Schedule design: 7:15 AM America/Chicago every day'
             echo '- Audiences: Henry and Destiny, separated'
             echo '- Approval controls: approve all, approve selected, approve one'
             echo '- Audit state: SQLite Durable Object with idempotent approvals and duplicate-send protection'
+            echo "- Deployment mode: ${mode}"
             echo "- Email state: ${email_state}"
             echo '- ChatGPT dependency: none at runtime'
           } >> "$GITHUB_STEP_SUMMARY"
@@ -195,20 +214,23 @@ jobs:
         shell: bash
         run: |
           set +e
-          service_url="${BASE_URL:-unresolved}"
+          service_url="${BASE_URL:-not-deployed}"
           mode="${DEPLOY_MODE:-not-reached}"
-          email_state="PREVIEW / not activated"
+          email_state="NOT LIVE"
           if [ "$mode" = "live" ]; then email_state="LIVE"; fi
+          if [ "$mode" = "preview" ]; then email_state="PREVIEW"; fi
           cat > /tmp/daily-briefing-receipt.md <<EOF
-          ### Daily Briefing deployment — ${JOB_STATUS}
+          ### Daily Briefing build/deployment — ${JOB_STATUS}
 
           - Commit: \`${GITHUB_SHA}\`
           - Run: ${RUN_URL}
+          - QA: executed before credential gating
           - Service: ${service_url}
           - Deployment mode: ${mode}
           - Email state: ${email_state}
-          - Runtime schedule: 7:15 AM America/Chicago
+          - Schedule design: 7:15 AM America/Chicago
           - Approval controls: approve all / selected / one
+          - GitHub no-secret continuity fallback: active separately
           - ChatGPT runtime dependency: none
           - Recorded: $(date -u +'%Y-%m-%d %H:%M:%S UTC')
           EOF
