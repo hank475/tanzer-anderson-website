@@ -1,0 +1,155 @@
+name: Deploy White Arc Sprint Private Room
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - cloud/sprint-private-room/**
+      - .github/workflows/deploy-sprint-private-room.yml
+  push:
+    branches: [main]
+    paths:
+      - cloud/sprint-private-room/**
+      - .github/workflows/deploy-sprint-private-room.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tanzer-anderson-sprint-private-room-production
+  cancel-in-progress: false
+
+env:
+  CLOUDFLARE_PAGES_PROJECT: tanzer-anderson-sprint-room
+
+jobs:
+  validate-and-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build deploy directory
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf dist
+          mkdir -p dist
+          cp cloud/sprint-private-room/index.html dist/index.html
+          cp cloud/sprint-private-room/_headers dist/_headers
+
+      - name: Consolidated room QA
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          page = Path('dist/index.html')
+          headers = Path('dist/_headers')
+          if not page.exists() or page.stat().st_size < 25000:
+              raise SystemExit('Sprint room HTML is missing or unexpectedly small')
+          if not headers.exists() or headers.stat().st_size < 250:
+              raise SystemExit('Security headers are missing')
+          text = page.read_text(encoding='utf-8')
+          required = [
+              'White Arc Sprint Private Room',
+              'Live cloud room · v1.2 · synthetic candidate data',
+              'data-deployment="cloud-live-v1.2"',
+              'Candidate Recommendations',
+              'Why this person was chosen',
+              'How to approach',
+              'LinkedIn profile ID',
+              'demo-isabella-morgan',
+              'demo-noah-bennett',
+              'tanzer-anderson-approved-slate.csv',
+          ]
+          missing = [token for token in required if token not in text]
+          if missing:
+              raise SystemExit(f'Missing required room content: {missing}')
+          if 'https://www.linkedin.com/' in text:
+              raise SystemExit('Synthetic staging room must not contain live LinkedIn URLs')
+          if re.search(r'\bfetch\s*\(', text):
+              raise SystemExit('Static staging room unexpectedly contains an API call')
+          if text.count("li:'demo-") != 10:
+              raise SystemExit('Expected ten synthetic LinkedIn profile IDs')
+          header_text = headers.read_text(encoding='utf-8')
+          for token in ('noindex', 'no-store', 'Content-Security-Policy'):
+              if token not in header_text:
+                  raise SystemExit(f'Missing response-header control: {token}')
+          print('White Arc Sprint Private Room QA: PASS')
+          PY
+
+      - name: Ensure Cloudflare Pages project
+        if: github.event_name != 'pull_request'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          endpoint="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/${CLOUDFLARE_PAGES_PROJECT}"
+          status=$(curl -sS -o /tmp/pages-project.json -w '%{http_code}' \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            -H 'Content-Type: application/json' \
+            "$endpoint")
+          if [ "$status" = "404" ]; then
+            curl -fsS -X POST \
+              -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+              -H 'Content-Type: application/json' \
+              --data "{\"name\":\"${CLOUDFLARE_PAGES_PROJECT}\",\"production_branch\":\"main\"}" \
+              "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects" \
+              > /tmp/pages-project-created.json
+          elif [ "$status" != "200" ]; then
+            cat /tmp/pages-project.json >&2
+            exit 1
+          fi
+
+      - name: Deploy to Cloudflare Pages
+        if: github.event_name != 'pull_request'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@latest pages deploy dist \
+            --project-name="$CLOUDFLARE_PAGES_PROJECT" \
+            --branch=main \
+            --commit-dirty=true
+
+      - name: Verify live room
+        if: github.event_name != 'pull_request'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          sleep 12
+          curl -fsS \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/${CLOUDFLARE_PAGES_PROJECT}" \
+            > /tmp/pages-project-live.json
+          subdomain=$(python3 - <<'PY'
+          import json
+          with open('/tmp/pages-project-live.json', encoding='utf-8') as f:
+              payload = json.load(f)
+          print(payload.get('result', {}).get('subdomain', ''))
+          PY
+          )
+          test -n "$subdomain"
+          room_url="https://${subdomain}/"
+          code=$(curl -sS -o /tmp/live-room.html -w '%{http_code}' "$room_url")
+          test "$code" = "200"
+          grep -q 'Live cloud room · v1.2 · synthetic candidate data' /tmp/live-room.html
+          curl -sSI "$room_url" | tr -d '\r' | grep -qi '^x-robots-tag:.*noindex'
+          {
+            echo '## White Arc Sprint Private Room'
+            echo "Live URL: ${room_url}"
+            echo 'Deployment verification: PASS'
+          } >> "$GITHUB_STEP_SUMMARY"
