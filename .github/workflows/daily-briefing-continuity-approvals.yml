@@ -1,0 +1,114 @@
+name: Record Daily Briefing Continuity Approvals
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  record-approval:
+    if: >-
+      github.event.issue.pull_request == null &&
+      startsWith(github.event.issue.title, '[Daily Briefing]') &&
+      github.actor == github.repository_owner
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Parse command and update approval checklist
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          COMMAND: ${{ github.event.comment.body }}
+          APPROVER: ${{ github.actor }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh issue view "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --json body,title > /tmp/issue.json
+          python3 - <<'PY'
+          import json
+          import os
+          import re
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          issue = json.loads(Path('/tmp/issue.json').read_text(encoding='utf-8'))
+          body = issue['body']
+          raw = os.environ['COMMAND'].strip()
+          normalized = re.sub(r'\s+', ' ', raw.upper()).strip()
+          approved = []
+          held = []
+
+          if normalized == 'APPROVE ALL':
+              ids = re.findall(r'^- \[ \] \*\*([A-Z]\d+)\*\*', body, flags=re.M)
+              approved = ids
+          else:
+              match = re.fullmatch(r'APPROVE\s+([A-Z]\d+(?:\s*,\s*[A-Z]\d+)*)', normalized)
+              hold_match = re.fullmatch(r'HOLD\s+([A-Z]\d+(?:\s*,\s*[A-Z]\d+)*)', normalized)
+              if match:
+                  approved = [part.strip() for part in match.group(1).split(',')]
+              elif hold_match:
+                  held = [part.strip() for part in hold_match.group(1).split(',')]
+              else:
+                  raise SystemExit('UNRECOGNIZED_COMMAND')
+
+          available = set(re.findall(r'^- \[[ xX]\] \*\*([A-Z]\d+)\*\*', body, flags=re.M))
+          unknown = [item for item in approved + held if item not in available]
+          if unknown:
+              raise SystemExit('UNKNOWN_IDS:' + ','.join(unknown))
+
+          changed = []
+          for item_id in approved:
+              pattern = rf'^- \[ \] \*\*{re.escape(item_id)}\*\*'
+              updated, count = re.subn(pattern, f'- [x] **{item_id}**', body, count=1, flags=re.M)
+              if count:
+                  body = updated
+                  changed.append(item_id)
+
+          for item_id in held:
+              pattern = rf'(^- \[[ xX]\] \*\*{re.escape(item_id)}\*\*[^\n]*)(?!.*— HELD)'
+              updated, count = re.subn(pattern, r'\1 — **HELD**', body, count=1, flags=re.M)
+              if count:
+                  body = updated
+                  changed.append(item_id)
+
+          timestamp = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
+          Path('/tmp/body.md').write_text(body, encoding='utf-8')
+          receipt = {
+              'approved': approved,
+              'held': held,
+              'changed': changed,
+              'approver': os.environ['APPROVER'],
+              'timestamp': timestamp,
+          }
+          Path('/tmp/receipt.json').write_text(json.dumps(receipt), encoding='utf-8')
+          PY
+
+          gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file /tmp/body.md
+          python3 - <<'PY' > /tmp/receipt.md
+          import json
+          from pathlib import Path
+          r = json.loads(Path('/tmp/receipt.json').read_text())
+          if r['approved']:
+              action = 'Approved: ' + ', '.join(r['approved'])
+          else:
+              action = 'Held: ' + ', '.join(r['held'])
+          print('### Approval receipt')
+          print()
+          print(f"- {action}")
+          print(f"- Approver: `@{r['approver']}`")
+          print(f"- Recorded: {r['timestamp']}")
+          print('- Execution state: recorded only; this GitHub continuity lane does not release external outreach or bypass governed execution gates.')
+          PY
+          gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file /tmp/receipt.md
+
+      - name: Explain invalid commands without changing state
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        shell: bash
+        run: |
+          gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body 'Command not applied. Use `APPROVE ALL`, `APPROVE A1,A3`, or `HOLD A2` with valid IDs from this briefing.' || true
