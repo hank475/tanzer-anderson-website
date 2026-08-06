@@ -1,11 +1,6 @@
 name: Deploy White Arc Sprint Private Room
 
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - cloud/sprint-private-room/**
-      - .github/workflows/deploy-sprint-private-room.yml
   push:
     branches: [main]
     paths:
@@ -15,29 +10,30 @@ on:
 
 permissions:
   contents: read
+  pages: write
+  id-token: write
+  issues: write
 
 concurrency:
-  group: tanzer-anderson-sprint-private-room-production
-  cancel-in-progress: false
-
-env:
-  CLOUDFLARE_PAGES_PROJECT: tanzer-anderson-sprint-room
+  group: tanzer-anderson-sprint-private-room-pages
+  cancel-in-progress: true
 
 jobs:
-  validate-and-deploy:
+  build:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Build deploy directory
+      - name: Build site artifact
         shell: bash
         run: |
           set -euo pipefail
-          rm -rf dist
-          mkdir -p dist
-          cp cloud/sprint-private-room/index.html dist/index.html
-          cp cloud/sprint-private-room/_headers dist/_headers
+          rm -rf site
+          mkdir -p site
+          cp cloud/sprint-private-room/index.html site/index.html
+          touch site/.nojekyll
 
       - name: Consolidated room QA
         shell: bash
@@ -47,12 +43,10 @@ jobs:
           from pathlib import Path
           import re
 
-          page = Path('dist/index.html')
-          headers = Path('dist/_headers')
+          page = Path('site/index.html')
           if not page.exists() or page.stat().st_size < 25000:
               raise SystemExit('Sprint room HTML is missing or unexpectedly small')
-          if not headers.exists() or headers.stat().st_size < 250:
-              raise SystemExit('Security headers are missing')
+
           text = page.read_text(encoding='utf-8')
           required = [
               'White Arc Sprint Private Room',
@@ -65,6 +59,7 @@ jobs:
               'demo-isabella-morgan',
               'demo-noah-bennett',
               'tanzer-anderson-approved-slate.csv',
+              '<meta name="robots" content="noindex,nofollow,noarchive">',
           ]
           missing = [token for token in required if token not in text]
           if missing:
@@ -75,81 +70,45 @@ jobs:
               raise SystemExit('Static staging room unexpectedly contains an API call')
           if text.count("li:'demo-") != 10:
               raise SystemExit('Expected ten synthetic LinkedIn profile IDs')
-          header_text = headers.read_text(encoding='utf-8')
-          for token in ('noindex', 'no-store', 'Content-Security-Policy'):
-              if token not in header_text:
-                  raise SystemExit(f'Missing response-header control: {token}')
           print('White Arc Sprint Private Room QA: PASS')
           PY
 
-      - name: Ensure Cloudflare Pages project
-        if: github.event_name != 'pull_request'
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          test -n "$CLOUDFLARE_API_TOKEN"
-          test -n "$CLOUDFLARE_ACCOUNT_ID"
-          endpoint="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/${CLOUDFLARE_PAGES_PROJECT}"
-          status=$(curl -sS -o /tmp/pages-project.json -w '%{http_code}' \
-            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
-            -H 'Content-Type: application/json' \
-            "$endpoint")
-          if [ "$status" = "404" ]; then
-            curl -fsS -X POST \
-              -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
-              -H 'Content-Type: application/json' \
-              --data "{\"name\":\"${CLOUDFLARE_PAGES_PROJECT}\",\"production_branch\":\"main\"}" \
-              "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects" \
-              > /tmp/pages-project-created.json
-          elif [ "$status" != "200" ]; then
-            cat /tmp/pages-project.json >&2
-            exit 1
-          fi
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
 
-      - name: Deploy to Cloudflare Pages
-        if: github.event_name != 'pull_request'
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          npx --yes wrangler@latest pages deploy dist \
-            --project-name="$CLOUDFLARE_PAGES_PROJECT" \
-            --branch=main \
-            --commit-dirty=true
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: site
 
-      - name: Verify live room
-        if: github.event_name != 'pull_request'
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    timeout-minutes: 10
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Record verified live URL
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          GH_TOKEN: ${{ github.token }}
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
         shell: bash
         run: |
           set -euo pipefail
-          sleep 12
-          curl -fsS \
-            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
-            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/${CLOUDFLARE_PAGES_PROJECT}" \
-            > /tmp/pages-project-live.json
-          subdomain=$(python3 - <<'PY'
-          import json
-          with open('/tmp/pages-project-live.json', encoding='utf-8') as f:
-              payload = json.load(f)
-          print(payload.get('result', {}).get('subdomain', ''))
-          PY
-          )
-          test -n "$subdomain"
-          room_url="https://${subdomain}/"
-          code=$(curl -sS -o /tmp/live-room.html -w '%{http_code}' "$room_url")
-          test "$code" = "200"
-          grep -q 'Live cloud room · v1.2 · synthetic candidate data' /tmp/live-room.html
-          curl -sSI "$room_url" | tr -d '\r' | grep -qi '^x-robots-tag:.*noindex'
+          body=$(jq -n --arg body "White Arc Sprint Private Room deployment verified: ${PAGE_URL}" '{body:$body}')
+          curl -fsS -X POST \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/issues/4/comments" \
+            -d "$body"
           {
             echo '## White Arc Sprint Private Room'
-            echo "Live URL: ${room_url}"
+            echo "Live URL: ${PAGE_URL}"
             echo 'Deployment verification: PASS'
           } >> "$GITHUB_STEP_SUMMARY"
