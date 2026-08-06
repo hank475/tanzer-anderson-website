@@ -1,0 +1,20 @@
+{
+  "name": "tanzer-communications-suite-v1",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Gmail-backed Tanzer Mail and Cloudflare RealtimeKit meeting applications with a no-send QA gate.",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "bootstrap": "node bootstrap.mjs",
+    "test": "node --test packages/email-renderer/test/*.test.mjs packages/core/test/*.test.mjs",
+    "validate": "node scripts/validate.mjs",
+    "check": "npm run test && npm run validate",
+    "cf:types:mail": "wrangler types --config apps/mail/wrangler.jsonc apps/mail/src/worker-configuration.d.ts",
+    "cf:types:meet": "wrangler types --config apps/meet/wrangler.jsonc apps/meet/src/worker-configuration.d.ts",
+    "cf:dry-run:mail": "wrangler deploy --dry-run --config apps/mail/wrangler.jsonc --env production",
+    "cf:dry-run:meet": "wrangler deploy --dry-run --config apps/meet/wrangler.jsonc --env production"
+  },
+  "dependencies": { "@neondatabase/serverless": "^1.0.0" },
+  "devDependencies": { "wrangler": "^4.0.0" }
+}

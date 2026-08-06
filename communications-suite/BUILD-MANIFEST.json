@@ -1,0 +1,103 @@
+{
+  "suite": "Tanzer Communications Suite v1",
+  "generatedAt": "2026-08-06T12:57:24Z",
+  "releaseState": "built_qa_locked_not_deployed",
+  "github": {
+    "repository": "hank475/tanzer-anderson-website",
+    "baseSha": "61de0328b14a053ed4f0698d8794c43b86b0ee87",
+    "branch": "feature/tanzer-communications-suite-v1",
+    "pullRequestCreated": false
+  },
+  "cloudflare": {
+    "accountId": "45d0c5f0595a21c89e6cc071512e8fb1",
+    "mailDomain": "mail.tanzeranderson.com",
+    "meetDomain": "meet.tanzeranderson.com",
+    "deployed": false,
+    "existingWebsiteProjectTouched": false
+  },
+  "neon": {
+    "projectId": "dawn-brook-62693378",
+    "targetBranchId": "br-still-darkness-af54a813",
+    "database": "neondb",
+    "tenantId": "f0373cc3-e2fc-4b43-b285-3f54960a43ad",
+    "migrationStatus": "staging_rejected_not_applied"
+  },
+  "template": {
+    "key": "TA_PRIVATE_MONOGRAPH_V2_2",
+    "version": "2.2",
+    "rendererSha256": "005d5fec474f46c9e985fb7faf2a67bc12eb52667b8568f2cc05c2a758a2ce31",
+    "signatureCommitted": false
+  },
+  "locks": {
+    "externalSend": false,
+    "scheduling": false,
+    "meetings": false
+  },
+  "validation": {
+    "nodeTestsPassed": 9,
+    "nodeTestsFailed": 0,
+    "consolidatedChecksPassed": 11,
+    "consolidatedChecksFailed": 0,
+    "wranglerLocalDryRun": "unavailable_registry"
+  },
+  "providerActions": {
+    "emailsSent": 0,
+    "invitationsIssued": 0,
+    "meetingsCreated": 0,
+    "participantTokensIssued": 0
+  },
+  "files": [
+    {"path":".env.example","bytes":935,"sha256":"10d07e984b3355f5143b14ffe3e4f9c446f6b591828ef664a527f870d53c1315"},
+    {"path":".github/workflows/communications-suite-ci.yml","bytes":1692,"sha256":"ef127e512687615583bcf902a2d127cc4b22f732094adb2578d414397fb9dd5f"},
+    {"path":".github/workflows/deploy-communications-suite.yml","bytes":1550,"sha256":"5b30339d29c50d1d16921002d266ba33043469b7ab11ad4463566d6369b4293e"},
+    {"path":".gitignore","bytes":105,"sha256":"abc6d64429f55f543013a6cf6c75247d41a60452e1fe14fa28eb98367c4fc344"},
+    {"path":"BUILD_STATUS.md","bytes":2205,"sha256":"ddf44961d3186c0bdee6063064374df0ad26f7a312cb53ea05e7efa1922c2bba"},
+    {"path":"README.md","bytes":3329,"sha256":"acaff6e0bf190130d2e7729b4c3d2d2c4027d16c96f4d7610ce6b5124296804e"},
+    {"path":"SECURITY.md","bytes":1444,"sha256":"ac9529b9022d911385af94cd1287b348c73d5eff1cd5ed86c3640276f527df14"},
+    {"path":"apps/mail/public/app.js","bytes":23361,"sha256":"ea101d3d1a2e2ed44f3e7db1a582d06660f8ee3534787d623cd3317fa4aaff76"},
+    {"path":"apps/mail/public/icon.svg","bytes":487,"sha256":"8847b1dcfbea7a288314442eae6223f89a616e3343035cd33bc69c4e9faac53b"},
+    {"path":"apps/mail/public/index.html","bytes":7268,"sha256":"9218caa816492fab9dca2cbcd0e9d73e0d2412e50d0d72941918acf022e08bb0"},
+    {"path":"apps/mail/public/manifest.webmanifest","bytes":357,"sha256":"2c36a97acaa40ad3c2e7ae5f4c3f952c1a40f9381f317b073db7c9e31e050d4f"},
+    {"path":"apps/mail/public/styles.css","bytes":12600,"sha256":"7d958117f013a668f1099ec68f9a1a61c8bf870b2a194f3cc9f4a8a566b1ebdd"},
+    {"path":"apps/mail/public/sw.js","bytes":734,"sha256":"9a0fe2a6584e713ed00f7f2a1011eac523d4c935476facf81259a85a70869857"},
+    {"path":"apps/mail/src/index.js","bytes":23580,"sha256":"871227d58f0f64246d7410c9bac4dc861d0477c111b1ce9799619f178314254c"},
+    {"path":"apps/mail/wrangler.jsonc","bytes":1951,"sha256":"caed7837d4dd776f3b25305ae882391ed0326dafab01e229ba6f0f7fd8edc978"},
+    {"path":"apps/meet/public/app.js","bytes":5123,"sha256":"946c8e8510cc7b1cdf1988d095c0fe5de0b0292dd544c6f822aaee4b48ff54ac"},
+    {"path":"apps/meet/public/icon.svg","bytes":475,"sha256":"a69cbf2aa507034263a631b9a390295effaac8e2954dae62d050ec46c3026095"},
+    {"path":"apps/meet/public/index.html","bytes":4233,"sha256":"d15587860c0ab002b2bc11925cac656e693b3d459ba6a35ce634f1c22e033f03"},
+    {"path":"apps/meet/public/manifest.webmanifest","bytes":354,"sha256":"c836fc859084f2771c68649dd7835d87bc7eac14cc387cfced1eda6dcba0b576"},
+    {"path":"apps/meet/public/styles.css","bytes":6651,"sha256":"28ab842a0c2d4844a7c0cb1825e4ce240b7ba390519fbd18f91fa76195389803"},
+    {"path":"apps/meet/public/sw.js","bytes":734,"sha256":"a286266d89be9874a58b35b0f6ee05c859dd1a5af7ed9150670a3180b811199f"},
+    {"path":"apps/meet/src/index.js","bytes":8899,"sha256":"2ca2cbdcf3a2e0f4cee61f880b6da4a224aab707dc99de70317995266545ebf8"},
+    {"path":"apps/meet/wrangler.jsonc","bytes":1879,"sha256":"ebe96bfea012a42535f47b3d8bd47e9d717945dbb6b39f4b718aa20015bf6a07"},
+    {"path":"database/migrations/001_tanzer_comms.sql","bytes":7979,"sha256":"852ab6ddc3a6f455d07d965b0ed5b7daca244683e0d725c639ff2889f59d151c"},
+    {"path":"docs/ARCHITECTURE.md","bytes":3077,"sha256":"2fe5624dce3836c9f732eca9d8dfabacf277a003d3435b514132103484a7a8db"},
+    {"path":"docs/DATA_HANDLING.md","bytes":1296,"sha256":"7a64eec10e5ea6d2fe280ff0311c4e34e131c5039ec18d6f78cd1c884560d5af"},
+    {"path":"docs/DEPLOYMENT.md","bytes":3631,"sha256":"2665cdd5f7747ca4dab3e919b41670a3385ca1374bd208ad0937791c3c2cf099"},
+    {"path":"docs/GOOGLE_OAUTH_SETUP.md","bytes":1019,"sha256":"4df1c3320c958ff7eb7df86307e7851d49daab2bacd5a232161fd095e4a2a83c"},
+    {"path":"docs/QA_RUNBOOK.md","bytes":1940,"sha256":"29cdc74cb065076293a40f4dcd491d78afd0c2cfb9789d1233bc0026316ff185"},
+    {"path":"docs/REALTIMEKIT_SETUP.md","bytes":1386,"sha256":"f222a962e638013237f9837f9b4a0776101c278e3ceef1b7dfcc33ce20ba2e11"},
+    {"path":"package.json","bytes":1007,"sha256":"ee75e0d3cce9d45912c683161a071eba6058b029fcc61c648ca108932ac528a0"},
+    {"path":"packages/core/src/cloudflare-realtime.js","bytes":1941,"sha256":"da087dbd6d8f152715b3ba6859c8d6a0ff54430449d9afc4932ae09cf49c6106"},
+    {"path":"packages/core/src/cookies.js","bytes":3474,"sha256":"a8457a97e9d4e47e3c5fb737709ee966af157376efecdbcbf874f829328d2777"},
+    {"path":"packages/core/src/crypto.js","bytes":3233,"sha256":"d326701f49ef193e63b97c236a495506032c664ba58168d338df5155aac8e601"},
+    {"path":"packages/core/src/db.js","bytes":10869,"sha256":"d636d8db04fcdddc153ffcd87fe9de8a4d090a3f2dc92d677f40eb6861803744"},
+    {"path":"packages/core/src/encoding.js","bytes":1908,"sha256":"6dd854e9776d015982e0d6d3efaddb1e2d7762a74eb27a2c82fd9f50501e29e8"},
+    {"path":"packages/core/src/gmail.js","bytes":15181,"sha256":"46a95a8f001c7eeff0ab1667ed0487cb85f9ae5690a198e36ab444500927a6df"},
+    {"path":"packages/core/src/google-oauth.js","bytes":10243,"sha256":"57d12c8517abfc4c1968d64752ea2d0bace863a0374eb300c298b8e11853c622"},
+    {"path":"packages/core/src/http.js","bytes":4508,"sha256":"9adadcbea3fc11248f5dc9bbb7120ebe856b820969b5743eb860fee06cbb9bdb"},
+    {"path":"packages/core/src/session-handoff.js","bytes":2778,"sha256":"dcf1b2a93e68a690eaaaa09fd6f35bc5bfb31fe799b2b1db2379eaa6dc737bb1"},
+    {"path":"packages/core/test/cookies.test.mjs","bytes":2157,"sha256":"3a3ca3857e600fff4098e24bfb4f42eb8e8f26e1da63a2418809acee4c387201"},
+    {"path":"packages/core/test/crypto.test.mjs","bytes":1079,"sha256":"55a2551ae0472a9e871f3b34aa6bebf332c305f364e54849006a4873bfcee406"},
+    {"path":"packages/email-renderer/src/index.js","bytes":826,"sha256":"de138988f5af9afa591ec0eb91b88205ffdbaf1debd0b584d786b4d60ab5c9a8"},
+    {"path":"packages/email-renderer/src/mime.js","bytes":5701,"sha256":"7da4f67f64d352d3cb93708cb3ea4b97ccf5077d9e5ace8b2cfcf7b9658d226b"},
+    {"path":"packages/email-renderer/src/private-monograph-v2.js","bytes":10688,"sha256":"005d5fec474f46c9e985fb7faf2a67bc12eb52667b8568f2cc05c2a758a2ce31"},
+    {"path":"packages/email-renderer/test/renderer.test.mjs","bytes":3231,"sha256":"2879fda8dc94690cc6f300b87f83b1db8246f0ac35d52199b5597e6cb9a356e8"},
+    {"path":"qa/VALIDATION-REPORT.md","bytes":3094,"sha256":"669daeb3394fcd5888c6ce8ac8f98ea349dc2ee99dd97df58ad82b77da4a6a74"},
+    {"path":"qa/private-monograph-preview-desktop.png","bytes":152768,"sha256":"27b08ebdd7a461adc7cf4939baed29fa6df46c7d66c67c5fa9804a97e296158e"},
+    {"path":"qa/private-monograph-preview.html","bytes":9035,"sha256":"0dc634e25d3054d12b2260da58e5d15ec5da21c0227e50868fbb1c67a271a053"},
+    {"path":"qa/validation-results.json","bytes":1340,"sha256":"32b3317158e3e21727d4caa74496cd91cb86ee5c18e5e5282924c296206bd391"},
+    {"path":"scripts/extract-signature.mjs","bytes":1328,"sha256":"6bff426ca6681aaf047d2e27d7b7fe153d0071aac42e72bafd71931d9d3262d6"},
+    {"path":"scripts/validate.mjs","bytes":12342,"sha256":"349274d0da619bff5af6fb2baee875fb19471d87e14ca4012c57c4a7fbd87d6a"}
+  ]
+}
