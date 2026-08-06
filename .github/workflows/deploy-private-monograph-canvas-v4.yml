@@ -38,6 +38,35 @@ jobs:
           sudo apt-get install -y --no-install-recommends fonts-ebgaramond fonts-inter fonts-urw-base35 file
           python3 -m pip install --quiet pillow numpy
 
+      - name: Validate renderer, sender, and configuration source
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile \
+            cloud/private-monograph-canvas-v4/render_canvas.py \
+            cloud/private-monograph-canvas-v4/render_batch.py
+          python3 -m json.tool cloud/private-monograph-canvas-v4/messages.json >/dev/null
+          python3 -m json.tool cloud/private-monograph-canvas-v4/appsscript.json >/dev/null
+          cp cloud/private-monograph-canvas-v4/Code.gs /tmp/CanvasV4.js
+          cat cloud/private-monograph-canvas-v4/TanzerBootstrap.gs >> /tmp/CanvasV4.js
+          node --check /tmp/CanvasV4.js
+          test "$(python3 - <<'PY'
+          import json
+          from pathlib import Path
+          data = json.loads(Path('cloud/private-monograph-canvas-v4/messages.json').read_text())
+          print(len(data['records']))
+          PY
+          )" = "20"
+          if grep -Eq '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}' cloud/private-monograph-canvas-v4/messages.json; then
+            echo 'Public render source unexpectedly contains recipient email addresses.' >&2
+            exit 1
+          fi
+          grep -q 'GmailApp.getAliases' cloud/private-monograph-canvas-v4/Code.gs
+          grep -q 'inlineImages: { canvas: blob }' cloud/private-monograph-canvas-v4/Code.gs
+          grep -q "from: alias" cloud/private-monograph-canvas-v4/Code.gs
+          grep -q 'automaticExternalSend: false' cloud/private-monograph-canvas-v4/Code.gs
+          grep -q '1Uxr48BV65b9TfLedl6OFtxKukavbGF-0OMAGISbahzM' cloud/private-monograph-canvas-v4/TanzerBootstrap.gs
+
       - name: Render exact correspondence canvases
         shell: bash
         run: |
