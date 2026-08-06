@@ -1,0 +1,187 @@
+name: Deploy Independent Daily Briefing
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - cloud/daily-briefing/**
+      - .github/workflows/deploy-daily-briefing.yml
+  workflow_dispatch:
+    inputs:
+      send_test:
+        description: Send a controlled briefing immediately after deployment
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: tanzer-anderson-daily-briefing-production
+  cancel-in-progress: false
+
+jobs:
+  validate-deploy-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      WORKER_NAME: tanzer-anderson-daily-briefing
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: cloud/daily-briefing/package.json
+
+      - name: Validate required account credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+
+      - name: Run consolidated briefing QA
+        working-directory: cloud/daily-briefing
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm test
+          node --check src/lib.js
+          node --check src/index.js
+          npx --yes wrangler@latest deploy --dry-run --config wrangler.preview.toml --outdir /tmp/ta-briefing-dry-run
+          test -s /tmp/ta-briefing-dry-run/index.js
+
+      - name: Resolve permanent Workers URL and prepare configs
+        shell: bash
+        run: |
+          set -euo pipefail
+          response=$(curl -fsS \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            -H "Content-Type: application/json" \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/subdomain")
+          subdomain=$(python3 -c 'import json,sys; print(json.load(sys.stdin).get("result",{}).get("subdomain", ""))' <<< "$response")
+          test -n "$subdomain"
+          base_url="https://${WORKER_NAME}.${subdomain}.workers.dev"
+          echo "BASE_URL=${base_url}" >> "$GITHUB_ENV"
+
+          cp cloud/daily-briefing/wrangler.toml /tmp/wrangler.live.toml
+          cp cloud/daily-briefing/wrangler.preview.toml /tmp/wrangler.preview.toml
+          python3 - "$base_url" <<'PY'
+          from pathlib import Path
+          import sys
+          base = sys.argv[1]
+          placeholder = 'https://tanzer-anderson-daily-briefing.example.workers.dev'
+          for name in ('/tmp/wrangler.live.toml', '/tmp/wrangler.preview.toml'):
+              path = Path(name)
+              text = path.read_text(encoding='utf-8')
+              if placeholder not in text:
+                  raise SystemExit(f'PUBLIC_BASE_URL placeholder missing in {name}')
+              path.write_text(text.replace(placeholder, base), encoding='utf-8')
+          PY
+
+      - name: Derive stable runtime secrets without logging them
+        shell: bash
+        run: |
+          set -euo pipefail
+          derive() {
+            printf '%s' "${CLOUDFLARE_API_TOKEN}|${CLOUDFLARE_ACCOUNT_ID}|$1" | sha256sum | awk '{print $1}'
+          }
+          approval=$(derive 'ta-daily-briefing-approval-v1')
+          admin=$(derive 'ta-daily-briefing-admin-v1')
+          source=$(derive 'ta-daily-briefing-source-v1')
+          webhook=$(derive 'ta-daily-briefing-webhook-v1')
+          for value in "$approval" "$admin" "$source" "$webhook"; do echo "::add-mask::$value"; done
+          {
+            echo "APPROVAL_SECRET=$approval"
+            echo "ADMIN_SECRET=$admin"
+            echo "SOURCE_SECRET=$source"
+            echo "WEBHOOK_SECRET=$webhook"
+          } >> "$GITHUB_ENV"
+
+      - name: Attempt live Email Service deployment, fail safely to preview
+        working-directory: cloud/daily-briefing
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +e
+          npx --yes wrangler@latest deploy --config /tmp/wrangler.live.toml 2>&1 | tee /tmp/ta-briefing-live-deploy.log
+          live_status=${PIPESTATUS[0]}
+          set -e
+
+          if [ "$live_status" -eq 0 ]; then
+            echo "DEPLOY_MODE=live" >> "$GITHUB_ENV"
+            echo "ACTIVE_CONFIG=/tmp/wrangler.live.toml" >> "$GITHUB_ENV"
+          else
+            echo "Cloudflare Email Service is not ready for this domain or token; deploying the complete approval service in preview mode." >&2
+            npx --yes wrangler@latest deploy --config /tmp/wrangler.preview.toml
+            echo "DEPLOY_MODE=preview" >> "$GITHUB_ENV"
+            echo "ACTIVE_CONFIG=/tmp/wrangler.preview.toml" >> "$GITHUB_ENV"
+          fi
+
+      - name: Install stable approval and control secrets
+        working-directory: cloud/daily-briefing
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s' "$APPROVAL_SECRET" | npx --yes wrangler@latest secret put APPROVAL_SIGNING_SECRET --config "$ACTIVE_CONFIG"
+          printf '%s' "$ADMIN_SECRET" | npx --yes wrangler@latest secret put ADMIN_TOKEN --config "$ACTIVE_CONFIG"
+          printf '%s' "$SOURCE_SECRET" | npx --yes wrangler@latest secret put SOURCE_PUSH_SECRET --config "$ACTIVE_CONFIG"
+          printf '%s' "$WEBHOOK_SECRET" | npx --yes wrangler@latest secret put APPROVAL_WEBHOOK_SECRET --config "$ACTIVE_CONFIG"
+
+      - name: Verify deployed service
+        shell: bash
+        run: |
+          set -euo pipefail
+          sleep 10
+          curl -fsS "$BASE_URL/health" > /tmp/ta-briefing-health.json
+          python3 - <<'PY'
+          import json
+          with open('/tmp/ta-briefing-health.json', encoding='utf-8') as f:
+              health = json.load(f)
+          assert health['ok'] is True
+          assert health['service'] == 'tanzer-anderson-daily-briefing'
+          assert health['schedule'] == '07:15 America/Chicago'
+          print(json.dumps(health, indent=2))
+          PY
+          curl -fsS "$BASE_URL/" | grep -q 'Daily Briefing Control'
+          curl -fsS "$BASE_URL/approve" | grep -q 'Daily Briefing Approval Center'
+          curl -fsS "$BASE_URL/select" | grep -q 'Review action items'
+
+      - name: Optional controlled send
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.send_test }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS -X POST \
+            -H "Authorization: Bearer ${ADMIN_SECRET}" \
+            -H "Content-Type: application/json" \
+            "$BASE_URL/api/admin/send-now" \
+            -d '{}' | tee /tmp/ta-briefing-send.json
+
+      - name: Publish deployment receipt
+        shell: bash
+        run: |
+          set -euo pipefail
+          email_state="PREVIEW — Cloudflare Email Service onboarding or destination verification remains required"
+          if [ "$DEPLOY_MODE" = "live" ]; then
+            email_state="LIVE — Cloudflare Email Service binding deployed"
+          fi
+          {
+            echo '## Tanzer Anderson Independent Daily Briefing'
+            echo
+            echo "- Service: ${BASE_URL}"
+            echo '- Schedule: 7:15 AM America/Chicago every day'
+            echo '- Audiences: Henry and Destiny, separated'
+            echo '- Approval controls: approve all, approve selected, approve one'
+            echo '- Audit state: SQLite Durable Object with idempotent approvals and duplicate-send protection'
+            echo "- Email state: ${email_state}"
+            echo '- ChatGPT dependency: none at runtime'
+          } >> "$GITHUB_STEP_SUMMARY"
