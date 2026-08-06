@@ -12,3 +12,9 @@
   Content-Type: image/jpeg
   X-Content-Type-Options: nosniff
   X-Robots-Tag: noindex, nofollow, noarchive
+
+/prospects/*
+  Cache-Control: public, max-age=31536000, immutable
+  Content-Type: image/jpeg
+  X-Content-Type-Options: nosniff
+  X-Robots-Tag: noindex, nofollow, noarchive
