@@ -185,3 +185,31 @@ jobs:
             echo "- Email state: ${email_state}"
             echo '- ChatGPT dependency: none at runtime'
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Record result in permanent deployment ledger
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          JOB_STATUS: ${{ job.status }}
+          RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        shell: bash
+        run: |
+          set +e
+          service_url="${BASE_URL:-unresolved}"
+          mode="${DEPLOY_MODE:-not-reached}"
+          email_state="PREVIEW / not activated"
+          if [ "$mode" = "live" ]; then email_state="LIVE"; fi
+          cat > /tmp/daily-briefing-receipt.md <<EOF
+          ### Daily Briefing deployment — ${JOB_STATUS}
+
+          - Commit: \`${GITHUB_SHA}\`
+          - Run: ${RUN_URL}
+          - Service: ${service_url}
+          - Deployment mode: ${mode}
+          - Email state: ${email_state}
+          - Runtime schedule: 7:15 AM America/Chicago
+          - Approval controls: approve all / selected / one
+          - ChatGPT runtime dependency: none
+          - Recorded: $(date -u +'%Y-%m-%d %H:%M:%S UTC')
+          EOF
+          gh issue comment 6 --repo "$GITHUB_REPOSITORY" --body-file /tmp/daily-briefing-receipt.md || true
