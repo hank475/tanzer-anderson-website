@@ -1,6 +1,11 @@
 name: Daily Briefing Continuity Fallback
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - cloud/daily-briefing/fallback/**
+      - .github/workflows/daily-briefing-continuity.yml
   schedule:
     # GitHub cron is UTC. Run both possible Central offsets; the local-time
     # guard permits only the invocation that is exactly 07:15 Chicago time.
@@ -34,8 +39,8 @@ jobs:
           from zoneinfo import ZoneInfo
           import os
           now = datetime.now(ZoneInfo('America/Chicago'))
-          manual = os.getenv('GITHUB_EVENT_NAME') == 'workflow_dispatch'
-          allowed = manual or (now.hour == 7 and now.minute == 15)
+          event_name = os.getenv('GITHUB_EVENT_NAME')
+          allowed = event_name != 'schedule' or (now.hour == 7 and now.minute == 15)
           print(f"allowed={'true' if allowed else 'false'}")
           print(f"date_key={now:%Y-%m-%d}")
           print(f"long_date={now:%A, %B %-d, %Y}")
