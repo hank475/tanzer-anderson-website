@@ -1,0 +1,58 @@
+name: Validate Pure HTML V8
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - cloud/email/pure-html-v8/**
+      - .github/workflows/validate-pure-html-v8.yml
+  push:
+    branches: [main]
+    paths:
+      - cloud/email/pure-html-v8/**
+      - .github/workflows/validate-pure-html-v8.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Validate syntax and generate both modes
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp cloud/email/pure-html-v8/Code.gs /tmp/pure-html-v8.js
+          node --check /tmp/pure-html-v8.js
+          node cloud/email/pure-html-v8/validate-v8.js
+
+      - name: Confirm MIME-safe HTML contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m json.tool cloud/email/pure-html-v8/policy.json >/dev/null
+          for file in cloud/email/pure-html-v8/artifacts/*.html; do
+            test -s "$file"
+            test "$(stat -c%s "$file")" -lt 50000
+            ! grep -Eqi '<img|background-image|url\(|cid:|data:image|<style|@media|<script|display:flex|display:grid|position:absolute|position:fixed|transform:' "$file"
+            grep -q 'Dear Henry,' "$file"
+            grep -q 'PROOF OF CONCEPT' "$file"
+            grep -q 'director@tanzeranderson.com' "$file"
+          done
+          grep -q '"qa_pass": true' cloud/email/pure-html-v8/artifacts/receipt.json
+          echo 'Pure HTML V8 QA: PASS'
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pure-html-v8-samples
+          path: cloud/email/pure-html-v8/artifacts
+          if-no-files-found: error
