@@ -1,0 +1,36 @@
+name = "tanzer-anderson-daily-briefing"
+main = "src/index.js"
+compatibility_date = "2026-08-06"
+workers_dev = true
+
+[observability]
+enabled = true
+
+[vars]
+TIME_ZONE = "America/Chicago"
+PUBLIC_BASE_URL = "https://tanzer-anderson-daily-briefing.example.workers.dev"
+EMAIL_ENABLED = "true"
+HENRY_ENABLED = "true"
+DESTINY_ENABLED = "true"
+HENRY_EMAIL = "henry@tanzeranderson.com"
+DESTINY_EMAIL = "coordinator@tanzeranderson.com"
+SENDER_EMAIL = "briefings@tanzeranderson.com"
+LINK_TTL_SECONDS = "259200"
+
+[triggers]
+# Cloudflare Cron uses UTC. Both triggers run; the Worker sends only when
+# America/Chicago local time is exactly 07:15, which safely covers DST.
+crons = ["15 12 * * *", "15 13 * * *"]
+
+[[durable_objects.bindings]]
+name = "LEDGER"
+class_name = "ApprovalLedger"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["ApprovalLedger"]
+
+[[send_email]]
+name = "EMAIL"
+allowed_destination_addresses = ["henry@tanzeranderson.com", "coordinator@tanzeranderson.com"]
+allowed_sender_addresses = ["briefings@tanzeranderson.com"]
