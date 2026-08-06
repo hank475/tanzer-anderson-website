@@ -1,0 +1,162 @@
+name: Deploy release integrity guard
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/deploy-release-integrity-guard.yml
+  workflow_run:
+    workflows:
+      - Deploy approved cosmetic pass
+      - Deploy approved cosmetic pass v2
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tanzer-anderson-release-integrity-guard
+  cancel-in-progress: false
+
+jobs:
+  restore-and-verify:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Capture current production source
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf site
+          mkdir -p site
+          wget --recursive --level=inf --page-requisites --adjust-extension --convert-links \
+            --no-host-directories --domains=tanzeranderson.com,www.tanzeranderson.com \
+            --directory-prefix=site --user-agent='Tanzer-Anderson-Release-Integrity/1.0' \
+            https://tanzeranderson.com/ || test $? -eq 8
+          for path in \
+            about/ about/principles/ contact/ private-client/ \
+            private-client/search-command/ private-client/candidate-intelligence/ private-client/decisions-outcomes/ \
+            what-we-do/ what-we-do/executive-search/ what-we-do/professional-staffing/ \
+            what-we-do/talent-advisory/ what-we-do/market-intelligence/ approach/ \
+            who-we-advise/ceos-boards-executive-teams/ who-we-advise/private-equity-portfolio-companies/ \
+            who-we-advise/technology-ai-cybersecurity/ who-we-advise/engineering-industrial-infrastructure/ \
+            who-we-advise/healthcare-financial-consumer/ insights/ privacy/ terms/ accessibility/ \
+            commercial-talent-sprint/; do
+            mkdir -p "site/$path"
+            curl -fsSL "https://tanzeranderson.com/$path" -o "site/${path}index.html" || true
+          done
+          curl -fsSL https://tanzeranderson.com/robots.txt -o site/robots.txt || true
+          curl -fsSL https://tanzeranderson.com/sitemap.xml -o site/sitemap.xml || true
+
+      - name: Restore canonical Sprint page and exact title
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p site/commercial-talent-sprint
+          cp cloud/commercial-talent-sprint/index.html site/commercial-talent-sprint/index.html
+          python3 - <<'PY'
+          from pathlib import Path
+
+          root = Path('site')
+          exact = 'Managing Director - Strategy and Business Development'
+          variants = [
+              'Managing Director — Strategy &amp; Business Development',
+              'Managing Director — Strategy & Business Development',
+              'Managing Director – Strategy &amp; Business Development',
+              'Managing Director – Strategy & Business Development',
+              'Managing Director - Strategy &amp; Business Development',
+              'Managing Director of Business Development &amp; Account Management',
+              'Managing Director of Business Development & Account Management',
+              'Managing Director, Strategy &amp; Business Development',
+              'Managing Director, Strategy & Business Development',
+          ]
+          for path in root.rglob('*.html'):
+              text = path.read_text(encoding='utf-8', errors='replace')
+              original = text
+              for old in variants:
+                  text = text.replace(old, exact)
+              if text != original:
+                  path.write_text(text, encoding='utf-8')
+
+          sitemap = root / 'sitemap.xml'
+          if sitemap.exists():
+              text = sitemap.read_text(encoding='utf-8', errors='replace')
+              url = 'https://tanzeranderson.com/commercial-talent-sprint/'
+              if url not in text and '</urlset>' in text:
+                  text = text.replace(
+                      '</urlset>',
+                      f'  <url><loc>{url}</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>\n</urlset>'
+                  )
+                  sitemap.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Consolidated integrity QA
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          root = Path('site')
+          sprint = root / 'commercial-talent-sprint/index.html'
+          required = [root/'index.html', root/'contact/index.html', sprint]
+          missing = [str(p) for p in required if not p.exists() or p.stat().st_size == 0]
+          if missing:
+              raise SystemExit(f'Missing required outputs: {missing}')
+
+          page = sprint.read_text(encoding='utf-8')
+          for token in (
+              'COMMERCIAL_TALENT_SPRINT_V1',
+              'https://buy.stripe.com/3cI9AVeob9nx9TuapJ3sI0b',
+              'Managing Director - Strategy and Business Development',
+              'id="sprint-intake"',
+          ):
+              if token not in page:
+                  raise SystemExit(f'Sprint integrity token missing: {token}')
+
+          prohibited = (
+              '[PRIVATE SPRINT PAGE]',
+              'Managing Director of Business Development & Account Management',
+              'Managing Director — Strategy &amp; Business Development',
+              'Managing Director – Strategy &amp; Business Development',
+          )
+          violations = []
+          for path in root.rglob('*.html'):
+              text = path.read_text(encoding='utf-8', errors='replace')
+              for token in prohibited:
+                  if token in text:
+                      violations.append(f'{path}: {token}')
+          if violations:
+              raise SystemExit('Release integrity violations: ' + '; '.join(violations))
+          print('Release integrity QA: PASS')
+          PY
+
+      - name: Deploy to Cloudflare Pages production
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          npx --yes wrangler@latest pages deploy site --project-name=tanzer-anderson-site2 --branch=main --commit-dirty=true
+
+      - name: Production verification
+        shell: bash
+        run: |
+          set -euo pipefail
+          sleep 15
+          for route in / /contact/ /commercial-talent-sprint/; do
+            code=$(curl -sS -o /tmp/page -w '%{http_code}' "https://tanzeranderson.com$route")
+            test "$code" = "200"
+          done
+          page=$(curl -fsSL https://tanzeranderson.com/commercial-talent-sprint/)
+          grep -q 'COMMERCIAL_TALENT_SPRINT_V1' <<< "$page"
+          grep -q '3cI9AVeob9nx9TuapJ3sI0b' <<< "$page"
+          grep -q 'Managing Director - Strategy and Business Development' <<< "$page"
+          echo 'Release integrity production verification: PASS'
