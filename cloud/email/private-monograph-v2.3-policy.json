@@ -1,5 +1,5 @@
 {
-  "policy_id": "TA_PRIVATE_MONOGRAPH_V2_3",
+  "policy_id": "TA_PRIVATE_MONOGRAPH_V2_4",
   "status": "active",
   "effective_date": "2026-08-06",
   "scope": "all_external_and_internal_email_generated_for_henry",
@@ -16,25 +16,42 @@
   },
   "signature": {
     "name": "Henry Anderson",
-    "presentation": "gold_cursive_letters",
-    "color": "#B28A4A",
-    "font_family": "Segoe Script, Brush Script MT, Snell Roundhand, cursive",
+    "presentation": "thin_dark_blue_cursive_right_slanted",
+    "color": "#0B2A4A",
+    "font_family": "Segoe Script, Snell Roundhand, URW Z003, Brush Script MT, cursive",
     "font_size_px": 29,
+    "font_weight": 400,
+    "font_style": "italic",
+    "right_slant_required": true,
     "title_below_signature": true,
     "email_below_title": true
   },
   "presentation": {
-    "template": "Private Monograph",
-    "version": "2.3",
+    "template": "Private Monograph Hybrid",
+    "version": "5.0",
     "texture_required": true,
     "texture_asset": "https://raw.githubusercontent.com/hank475/tanzer-anderson-website/main/assets/email/private-monograph-paper-texture.jpg",
     "texture_fallback_color": "#F7F3EA",
-    "email_client_strategy": "html_table_background_attribute_plus_inline_background_image"
+    "email_client_strategy": "native_table_html_first_with_optional_artwork_enhancement",
+    "native_content_must_survive_image_blocking": true,
+    "single_inline_image_dependency_prohibited": true
+  },
+  "first_touch": {
+    "standard": "proof_led",
+    "sequence": [
+      "specific_observation",
+      "low_friction_proof_mechanism",
+      "concrete_deliverable",
+      "clear_boundary",
+      "easy_next_step"
+    ],
+    "sprint_boundary": "preview_method_and_output_architecture_only_before_purchase"
   },
   "controls": {
     "external_send_requires_henry_release": true,
     "automatic_send": false,
     "drafts_must_remain_unsent_until_release": true,
-    "candidate_interest_or_availability_must_be_separately_verified": true
+    "candidate_interest_or_availability_must_be_separately_verified": true,
+    "gmail_and_outlook_mobile_visual_qa_required_before_external_release": true
   }
 }
