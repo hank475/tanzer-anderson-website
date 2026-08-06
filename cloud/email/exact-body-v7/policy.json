@@ -1,0 +1,43 @@
+{
+  "policy_id": "TA_EXACT_BODY_V7",
+  "status": "staged_for_internal_visual_qa",
+  "effective_date": "2026-08-06",
+  "scope": "all_first_touch_email_generated_for_henry",
+  "identity": {
+    "display_name": "Henry Anderson",
+    "sender_address": "director@tanzeranderson.com",
+    "reply_to_address": "director@tanzeranderson.com",
+    "title": "Managing Director - Strategy and Business Development"
+  },
+  "copy": {
+    "greeting_required": true,
+    "opening_prefix": "Rather than send a general agency pitch I’d suggest",
+    "proof_map_required": true,
+    "role_section_after_proof_map": true,
+    "candidate_submission_without_approval": false
+  },
+  "signature": {
+    "name": "Henry Anderson",
+    "color": "#0A2B4B",
+    "presentation": "thin_right_slanted_cursive"
+  },
+  "render": {
+    "width_px": 680,
+    "height_px": 1020,
+    "format": "image/jpeg",
+    "jpeg_quality": 55,
+    "maximum_html_bytes": 97280,
+    "full_height_glass_panel": true,
+    "attachment": false,
+    "cid_inline_image": false,
+    "background_image_dependency": false,
+    "body_data_uri": true
+  },
+  "controls": {
+    "external_send_requires_henry_release": true,
+    "automatic_external_send": false,
+    "recipient_route_must_be_verified": true,
+    "gmail_mobile_test_required": true,
+    "outlook_mobile_test_required": true
+  }
+}
