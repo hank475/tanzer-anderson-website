@@ -1,0 +1,113 @@
+name: Deploy Private Monograph Canvas v4
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - cloud/private-monograph-canvas-v4/**
+      - .github/workflows/deploy-private-monograph-canvas-v4.yml
+  push:
+    branches: [main]
+    paths:
+      - cloud/private-monograph-canvas-v4/**
+      - .github/workflows/deploy-private-monograph-canvas-v4.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tanzer-private-monograph-canvas-v4-production
+  cancel-in-progress: false
+
+env:
+  CLOUDFLARE_PAGES_PROJECT: tanzer-private-monograph-canvas-v4
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Assemble exact-render canvas
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf dist
+          mkdir -p dist
+          cat cloud/private-monograph-canvas-v4/canvas-q82.part.* | base64 --decode > dist/private-monograph-canvas-v4.jpg
+          cp cloud/private-monograph-canvas-v4/index.html dist/index.html
+          cp cloud/private-monograph-canvas-v4/_headers dist/_headers
+
+      - name: Consolidated canvas QA
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s dist/private-monograph-canvas-v4.jpg
+          test "$(stat -c%s dist/private-monograph-canvas-v4.jpg)" -gt 350000
+          file dist/private-monograph-canvas-v4.jpg | grep -q 'JPEG image data'
+          grep -q 'TA_PRIVATE_MONOGRAPH_CANVAS_V4' dist/index.html
+          grep -q 'director@tanzeranderson.com' dist/index.html
+          grep -q 'Managing Director - Strategy and Business Development' dist/index.html
+          grep -q 'private-monograph-canvas-v4.jpg' dist/index.html
+          grep -q 'noindex' dist/_headers
+          echo 'Private Monograph Canvas v4 QA: PASS'
+
+      - name: Ensure Cloudflare Pages project
+        if: github.event_name != 'pull_request'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          endpoint="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/${CLOUDFLARE_PAGES_PROJECT}"
+          status=$(curl -sS -o /tmp/project.json -w '%{http_code}' \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            -H 'Content-Type: application/json' \
+            "$endpoint")
+          if [ "$status" = "404" ]; then
+            curl -fsS -X POST \
+              -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+              -H 'Content-Type: application/json' \
+              --data "{\"name\":\"${CLOUDFLARE_PAGES_PROJECT}\",\"production_branch\":\"main\"}" \
+              "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects" \
+              > /tmp/project-created.json
+          elif [ "$status" != "200" ]; then
+            cat /tmp/project.json >&2
+            exit 1
+          fi
+
+      - name: Deploy exact-render canvas
+        if: github.event_name != 'pull_request'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@latest pages deploy dist \
+            --project-name="$CLOUDFLARE_PAGES_PROJECT" \
+            --branch=main \
+            --commit-dirty=true
+
+      - name: Verify deployed canvas
+        if: github.event_name != 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          sleep 12
+          origin="https://${CLOUDFLARE_PAGES_PROJECT}.pages.dev"
+          curl -fsSL "$origin/" | grep -q 'TA_PRIVATE_MONOGRAPH_CANVAS_V4'
+          headers=$(curl -fsSI "$origin/private-monograph-canvas-v4.jpg" | tr -d '\r')
+          grep -qi '^content-type: image/jpeg' <<< "$headers"
+          grep -qi '^cache-control:.*immutable' <<< "$headers"
+          {
+            echo '## Private Monograph Canvas v4'
+            echo "Preview: ${origin}/"
+            echo "Canvas: ${origin}/private-monograph-canvas-v4.jpg"
+            echo 'Deployment verification: PASS'
+          } >> "$GITHUB_STEP_SUMMARY"
