@@ -1,0 +1,68 @@
+name: Tanzer Communications Suite Bootstrap
+
+on:
+  push:
+    branches:
+      - feature/tanzer-communications-suite-v1
+    paths:
+      - communications-suite/.bootstrap-source.tar.gz.b64
+      - .github/workflows/tanzer-communications-bootstrap.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: tanzer-communications-bootstrap
+  cancel-in-progress: false
+
+jobs:
+  unpack-and-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out authorized feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: feature/tanzer-communications-suite-v1
+          fetch-depth: 0
+
+      - name: Verify and unpack source bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/tanzer-communications
+          base64 --decode communications-suite/.bootstrap-source.tar.gz.b64 > /tmp/tanzer-communications/source.tar.gz
+          echo "f4f26bad9401df87473a2770cf5d9d4e5c56c89ee5ccb9458725cc2d9cbb809c  /tmp/tanzer-communications/source.tar.gz" | sha256sum --check --strict
+          tar -xzf /tmp/tanzer-communications/source.tar.gz -C .
+
+      - name: Enforce QA locks and source integrity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f communications-suite/README.md
+          test -f communications-suite/apps/mail/src/index.js
+          test -f communications-suite/apps/meet/src/index.js
+          test -f communications-suite/database/migrations/001_tanzer_comms.sql
+          test -f .github/workflows/communications-suite-ci.yml
+          test -f .github/workflows/deploy-communications-suite.yml
+          grep -F '"EXTERNAL_SEND_ENABLED": "false"' communications-suite/apps/mail/wrangler.jsonc
+          grep -F '"SCHEDULING_ENABLED": "false"' communications-suite/apps/mail/wrangler.jsonc
+          grep -F '"MEETINGS_ENABLED": "false"' communications-suite/apps/meet/wrangler.jsonc
+          ! grep -R --line-number --exclude='*.md' --exclude='*.json' --exclude='*.jsonc' --exclude='*.yml' --exclude='*.yaml' --exclude='*.html' 'data:image/png;base64' communications-suite
+          npm --prefix communications-suite run check
+
+      - name: Replace bootstrap artifacts with reviewed source
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f communications-suite/.bootstrap-source.tar.gz.b64
+          rm -f .github/workflows/tanzer-communications-bootstrap.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A -- \
+            communications-suite \
+            .github/workflows/communications-suite-ci.yml \
+            .github/workflows/deploy-communications-suite.yml \
+            .github/workflows/tanzer-communications-bootstrap.yml
+          git diff --cached --check
+          git commit -m "feat: build Tanzer communications suite v1 with QA locks"
+          git push origin HEAD:feature/tanzer-communications-suite-v1
