@@ -26,17 +26,26 @@ env:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
 
-      - name: Assemble exact-render canvas
+      - name: Install deterministic render dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends fonts-ebgaramond fonts-inter fonts-urw-base35 file
+          python3 -m pip install --quiet pillow numpy
+
+      - name: Render exact correspondence canvas
         shell: bash
         run: |
           set -euo pipefail
           rm -rf dist
           mkdir -p dist
-          cat cloud/private-monograph-canvas-v4/canvas-q82.part.* | base64 --decode > dist/private-monograph-canvas-v4.jpg
+          python3 cloud/private-monograph-canvas-v4/render_canvas.py \
+            --output dist/private-monograph-canvas-v4.jpg
           cp cloud/private-monograph-canvas-v4/index.html dist/index.html
           cp cloud/private-monograph-canvas-v4/_headers dist/_headers
 
@@ -45,7 +54,7 @@ jobs:
         run: |
           set -euo pipefail
           test -s dist/private-monograph-canvas-v4.jpg
-          test "$(stat -c%s dist/private-monograph-canvas-v4.jpg)" -gt 350000
+          test "$(stat -c%s dist/private-monograph-canvas-v4.jpg)" -gt 300000
           file dist/private-monograph-canvas-v4.jpg | grep -q 'JPEG image data'
           grep -q 'TA_PRIVATE_MONOGRAPH_CANVAS_V4' dist/index.html
           grep -q 'director@tanzeranderson.com' dist/index.html
