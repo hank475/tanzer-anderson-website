@@ -1,4 +1,4 @@
-# Tanzer Anderson Private Monograph Email System v2.1
+# Tanzer Anderson Private Monograph Email System v2.2
 
 ## Approved canonical standard
 
@@ -13,9 +13,9 @@ The design removes the prior “Clarity. Alignment. Enduring Value.” headline,
 
 The complete Apps Script package is stored in the authorized Tanzer Anderson Google Drive:
 
-- Package: `Tanzer_Anderson_Private_Monograph_Email_Automation_v2.1.zip`
-- Drive file ID: `12kmXUrgLdXcsn96UoKQEBpTWYbKNxy_u`
-- SHA-256 record file ID: `1oFl5kr9cHRliOynCKtMZ4tuOSCOMEK6i`
+- Package: `Tanzer_Anderson_Private_Monograph_Email_Automation_v2.2.zip`
+- Drive file ID: `1iPS8tvEVi93xsn-H9vtYSYI1uHKHIcq3`
+- SHA-256 record file ID: `1R59JJXgMN99ZiRLpuL0l7WFDu9gGQKon`
 - Start Here Google Doc ID: `1nnkCpN6mrQl2lVCbfqLmFNniDf1YLupDCVDxzjm6u1E`
 
 ## One-run activation
@@ -29,9 +29,10 @@ The system then:
 3. Migrates drafts in controlled batches without sending them.
 4. Preserves recipients, subjects, CC/BCC, original threads, and ordinary attachments.
 5. Omits the external scheduling CTA on internal/control drafts.
-6. Applies the approved stationery to external drafts.
-7. Creates a one-minute watcher for newly saved drafts.
-8. Creates a migration log and rollback pathway.
+6. Treats no-recipient recipient-facing drafts as external unless their subject/body carries an internal-control cue.
+7. Skips drafts already carrying the canonical `TA_PRIVATE_MONOGRAPH_V2` marker, preventing nested re-wrapping.
+8. Creates a one-minute watcher for newly saved drafts.
+9. Creates a migration log and rollback pathway.
 
 ## Validation completed
 
@@ -41,8 +42,10 @@ The system then:
 - The superseded Strategy & Business Development title is absent.
 - No send method is present in the migration source.
 - Signature bytes match the packaged approved signature asset.
+- No-recipient and already-wrapped draft handling passed static checks.
 - ZIP integrity passed.
-- Master Gmail template and activation draft were created unsent.
+- Master Gmail template and v2.2 activation draft were created unsent.
+- The 163 pre-existing drafts were labeled `TA / PRIVATE MONOGRAPH / PENDING MIGRATION` for controlled cutover.
 
 ## Production gate
 
