@@ -5,23 +5,38 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 
-const EXPECTED_SHA256 = "f4f26bad9401df87473a2770cf5d9d4e5c56c89ee5ccb9458725cc2d9cbb809c";
+const ARCHIVE_SHA256 = "cbec0ba542ca886103f2303a22ac0dde38d66e27b0165fddad2c5e30071afefb";
+const PARTS = [
+  ["part-00.b64", "7db1431fa355bf2a64d5977add9734cf77af4eb0773b4c6082f75d58f4633d03"],
+  ["part-01.b64", "214ba523770a5bbfa8846950c805a49b8263b25c55bec6f69902b0960f8c5749"],
+  ["part-02.b64", "3b226fc623ddfcbbb741d58348e5410ba5fb17f525325214975afa4b182ef10c"],
+  ["part-03.b64", "9031b4072288ab9e51483fd817bcbd8b35cdb1b183ccb2a13c5896685bbddc21"],
+];
+
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = resolve(scriptDirectory, "..");
-const bundlePath = join(scriptDirectory, ".bootstrap-source.tar.gz.b64");
-const archivePath = join(tmpdir(), `tanzer-communications-${process.pid}.tar.gz`);
+const partsDirectory = join(scriptDirectory, ".bootstrap-v2");
+const archivePath = join(tmpdir(), `tanzer-communications-${process.pid}.tar.xz`);
+const chunks = [];
 
-const encoded = (await readFile(bundlePath, "utf8")).replace(/\s+/g, "");
-const archive = Buffer.from(encoded, "base64");
-const actualSha256 = createHash("sha256").update(archive).digest("hex");
+for (const [fileName, expectedSha256] of PARTS) {
+  const normalized = (await readFile(join(partsDirectory, fileName), "utf8")).replace(/\s+/g, "");
+  const actualSha256 = createHash("sha256").update(normalized, "utf8").digest("hex");
+  if (actualSha256 !== expectedSha256) {
+    throw new Error(`${fileName} checksum mismatch: ${actualSha256}`);
+  }
+  chunks.push(normalized);
+}
 
-if (actualSha256 !== EXPECTED_SHA256) {
-  throw new Error(`Source bundle checksum mismatch: ${actualSha256}`);
+const archive = Buffer.from(chunks.join(""), "base64");
+const actualArchiveSha256 = createHash("sha256").update(archive).digest("hex");
+if (actualArchiveSha256 !== ARCHIVE_SHA256) {
+  throw new Error(`Source archive checksum mismatch: ${actualArchiveSha256}`);
 }
 
 await writeFile(archivePath, archive, { mode: 0o600 });
 try {
-  const result = spawnSync("tar", ["-xzf", archivePath, "-C", repositoryRoot], {
+  const result = spawnSync("tar", ["-xJf", archivePath, "-C", repositoryRoot], {
     stdio: "inherit",
     shell: false,
   });
