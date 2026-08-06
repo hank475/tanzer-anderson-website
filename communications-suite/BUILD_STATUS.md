@@ -2,7 +2,9 @@
 
 ## Executive state
 
-The complete v1 source package has been built for Tanzer Mail and Tanzer Meet. It is staged for GitHub publication on `feature/tanzer-communications-suite-v1` and remains deliberately locked against external email, scheduled delivery, meeting creation, and meeting admission.
+Tanzer Mail and Tanzer Meet v1 are built and published on the isolated GitHub source branch `feature/tanzer-communications-suite-v1-source`. The branch contains the readable architecture, security, deployment, and status records plus a four-part, checksum-verified source archive and bootstrap script that expands the complete monorepo in place.
+
+The suite remains deliberately locked against external email, scheduled delivery, meeting creation, and meeting admission.
 
 ## Delivered
 
@@ -16,6 +18,17 @@ The complete v1 source package has been built for Tanzer Mail and Tanzer Meet. I
 - Cloudflare custom-domain configurations and manually gated deployment workflow
 - Automated tests, consolidated validation, QA preview, runbooks, and rollback-safe operating boundaries
 
+## GitHub source integrity
+
+```text
+Branch: feature/tanzer-communications-suite-v1-source
+Archive: XZ-compressed TAR, split into four Git text files
+Archive SHA-256: cbec0ba542ca886103f2303a22ac0dde38d66e27b0165fddad2c5e30071afefb
+Bootstrap: communications-suite/bootstrap.mjs
+```
+
+The bootstrap verifies every part, verifies the reconstructed archive, expands `communications-suite/` and the two repository-level workflows, and then permits the normal validation command. A clean-room reconstruction passed all 9 automated tests and all 11 consolidated controls.
+
 ## Immutable QA locks
 
 ```text
@@ -26,7 +39,9 @@ MEETINGS_ENABLED=false
 
 ## External-state changes made
 
-- GitHub feature branch created: `feature/tanzer-communications-suite-v1`
+- GitHub staging branch created: `feature/tanzer-communications-suite-v1`
+- GitHub source branch created: `feature/tanzer-communications-suite-v1-source`
+- Verified source archive, bootstrap, deployment configuration, and operating records published on the source branch
 
 ## External-state changes not made
 
@@ -38,6 +53,7 @@ MEETINGS_ENABLED=false
 - No external email sent
 - No invitation issued
 - No meeting created or opened
+- No participant token issued
 - No DNS, MX, SPF, DKIM, DMARC, website, billing, or plan change
 
 ## Neon staging note
@@ -46,4 +62,11 @@ The first safe temporary-branch staging request was rejected by the Neon connect
 
 ## Verification
 
-See `qa/VALIDATION-REPORT.md` and `qa/validation-results.json`.
+After expanding the source, run:
+
+```bash
+cd communications-suite
+npm run check
+```
+
+See `qa/VALIDATION-REPORT.md` and `qa/validation-results.json` after expansion.
