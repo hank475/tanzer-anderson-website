@@ -1,20 +1,20 @@
 {
   "henry": {
     "title": "Daily Executive Briefing",
-    "summary": "Independent continuity briefing. This GitHub-native fallback remains available when the Cloudflare email service or ChatGPT is unavailable.",
+    "summary": "Independent continuity briefing. The GitHub lane is live now; the Workspace Apps Script path is the fastest route to branded daily email and real approval buttons without a ChatGPT dependency.",
     "topPriorities": [
-      "Complete the independent daily briefing production deployment",
-      "Connect the governed Google Workspace source before the 7:15 AM send",
+      "Activate the Workspace-restricted daily briefing email and approval runtime",
+      "Verify Henry and Destiny's separate internal delivery lanes",
       "Maintain the external-outreach hold until wrapped-email QA passes"
     ],
     "decisions": [
       {
         "id": "A1",
-        "text": "Restore the Cloudflare API token and account ID to GitHub Actions"
+        "text": "Deploy and install the Google Workspace daily briefing runtime"
       },
       {
         "id": "A2",
-        "text": "Complete Cloudflare Email Service onboarding and recipient verification"
+        "text": "Keep Cloudflare activation as the secondary resilience lane after Workspace email is live"
       },
       {
         "id": "A3",
@@ -22,18 +22,18 @@
       }
     ],
     "risks": [
-      "The Cloudflare runtime is not live while the deployment credentials remain unavailable",
-      "Email delivery cannot be claimed until Email Service and both destinations are verified",
+      "Branded email is not live until the Workspace web app is deployed and the one-time installer runs",
+      "The Cloudflare runtime remains blocked while deployment credentials are unavailable",
       "No briefing approval authorizes an external campaign release unless the separate governing release gate permits it"
     ],
     "nextActions": [
       {
         "id": "A4",
-        "text": "Review the approve-all, approve-selected, and individual approval controls"
+        "text": "Run the controlled Henry and Destiny email delivery test"
       },
       {
         "id": "A5",
-        "text": "Connect the governed approval executor after the final safety review"
+        "text": "Verify approve-all, approve-selected, individual approval, and duplicate prevention"
       }
     ]
   },
