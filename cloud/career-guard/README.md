@@ -15,3 +15,5 @@ The deployed system includes:
 - a fail-closed external-submission boundary until an authenticated executor returns confirmation evidence.
 
 Raw candidate access tokens are never committed. Only token hashes are present inside the encrypted source bundle.
+
+Production activation trigger: 2026-08-06. This marker deliberately emits a second `push` event after the workflow entered the default branch; it does not change the validated application payload.
