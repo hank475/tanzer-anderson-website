@@ -1,0 +1,40 @@
+{
+  "policy_id": "TA_PRIVATE_MONOGRAPH_V2_3",
+  "status": "active",
+  "effective_date": "2026-08-06",
+  "scope": "all_external_and_internal_email_generated_for_henry",
+  "identity": {
+    "display_name": "Henry Anderson",
+    "sender_address": "director@tanzeranderson.com",
+    "reply_to_address": "director@tanzeranderson.com",
+    "title": "Managing Director - Strategy and Business Development"
+  },
+  "greeting": {
+    "required": true,
+    "format": "Hello {first_name},",
+    "fallback": "Hello,"
+  },
+  "signature": {
+    "name": "Henry Anderson",
+    "presentation": "gold_cursive_letters",
+    "color": "#B28A4A",
+    "font_family": "Segoe Script, Brush Script MT, Snell Roundhand, cursive",
+    "font_size_px": 29,
+    "title_below_signature": true,
+    "email_below_title": true
+  },
+  "presentation": {
+    "template": "Private Monograph",
+    "version": "2.3",
+    "texture_required": true,
+    "texture_asset": "https://raw.githubusercontent.com/hank475/tanzer-anderson-website/main/assets/email/private-monograph-paper-texture.jpg",
+    "texture_fallback_color": "#F7F3EA",
+    "email_client_strategy": "html_table_background_attribute_plus_inline_background_image"
+  },
+  "controls": {
+    "external_send_requires_henry_release": true,
+    "automatic_send": false,
+    "drafts_must_remain_unsent_until_release": true,
+    "candidate_interest_or_availability_must_be_separately_verified": true
+  }
+}
