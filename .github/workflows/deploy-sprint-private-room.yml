@@ -10,7 +10,6 @@ on:
 
 permissions:
   contents: write
-  issues: write
 
 concurrency:
   group: tanzer-anderson-sprint-private-room-pages
@@ -101,20 +100,12 @@ jobs:
           echo 'GitHub Pages did not expose the approved room within the verification window.' >&2
           exit 1
 
-      - name: Record verified live URL
+      - name: Write deployment summary
         env:
-          GH_TOKEN: ${{ github.token }}
           PAGE_URL: ${{ steps.verify.outputs.url }}
         shell: bash
         run: |
           set -euo pipefail
-          body=$(jq -n --arg body "White Arc Sprint Private Room deployment verified and active: ${PAGE_URL}" '{body:$body}')
-          curl -fsS -X POST \
-            -H "Authorization: Bearer ${GH_TOKEN}" \
-            -H "Accept: application/vnd.github+json" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/issues/4/comments" \
-            -d "$body"
           {
             echo '## White Arc Sprint Private Room'
             echo "Live URL: ${PAGE_URL}"
