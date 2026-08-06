@@ -1,0 +1,96 @@
+name: Validate Exact Body V7
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - cloud/email/exact-body-v7/**
+      - .github/workflows/validate-exact-body-v7.yml
+  push:
+    branches: [main]
+    paths:
+      - cloud/email/exact-body-v7/**
+      - .github/workflows/validate-exact-body-v7.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  render-and-validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install renderer dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends chromium-browser || sudo apt-get install -y --no-install-recommends chromium
+          python -m pip install --quiet pillow playwright
+
+      - name: Generate deterministic architectural test panel
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/exact-body-v7
+          python - <<'PY'
+          from PIL import Image, ImageDraw
+          w, h = 420, 1300
+          im = Image.new('RGB', (w, h), '#dce7ef')
+          d = ImageDraw.Draw(im)
+          for y in range(h):
+              shade = int(236 - 68 * y / h)
+              d.line((0, y, w, y), fill=(shade, shade + 5, min(255, shade + 12)))
+          d.ellipse((-220, 280, 630, 1160), fill='#f8f8f5')
+          d.ellipse((-145, 360, 555, 1085), fill='#1a2b38')
+          for x in range(20, w, 58):
+              d.line((x, 390, x, 1230), fill='#758999', width=3)
+          for y in range(430, 1230, 74):
+              d.line((0, y, w, y), fill='#718391', width=3)
+          im.save('/tmp/exact-body-v7/glass.jpg', quality=84, optimize=True)
+          PY
+
+      - name: Render sample correspondence
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHROMIUM=$(command -v chromium-browser || command -v chromium)
+          python cloud/email/exact-body-v7/render_exact_body.py \
+            --record cloud/email/exact-body-v7/sample-record.json \
+            --photo /tmp/exact-body-v7/glass.jpg \
+            --output-dir /tmp/exact-body-v7/output \
+            --chromium "$CHROMIUM"
+
+      - name: Consolidated V7 QA
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m json.tool cloud/email/exact-body-v7/policy.json >/dev/null
+          python -m json.tool cloud/email/exact-body-v7/sample-record.json >/dev/null
+          python -m py_compile cloud/email/exact-body-v7/render_exact_body.py
+          test -s /tmp/exact-body-v7/output/exact-body-v7-sample.jpg
+          test -s /tmp/exact-body-v7/output/exact-body-v7-sample-email.html
+          file /tmp/exact-body-v7/output/exact-body-v7-sample.jpg | grep -q 'JPEG image data'
+          test "$(stat -c%s /tmp/exact-body-v7/output/exact-body-v7-sample-email.html)" -lt 97280
+          grep -q 'data:image/jpeg;base64,' /tmp/exact-body-v7/output/exact-body-v7-sample-email.html
+          ! grep -qi 'Content-Disposition' /tmp/exact-body-v7/output/exact-body-v7-sample-email.html
+          ! grep -qi 'cid:' /tmp/exact-body-v7/output/exact-body-v7-sample-email.html
+          grep -q '"qa_pass": true' /tmp/exact-body-v7/output/exact-body-v7-sample-receipt.json
+          grep -q '"full_height_glass_panel": true' /tmp/exact-body-v7/output/exact-body-v7-sample-receipt.json
+          echo 'Exact Body V7 deterministic render QA: PASS'
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: exact-body-v7-sample
+          path: |
+            /tmp/exact-body-v7/output/exact-body-v7-sample.jpg
+            /tmp/exact-body-v7/output/exact-body-v7-sample-email.html
+            /tmp/exact-body-v7/output/exact-body-v7-sample-receipt.json
+          if-no-files-found: error
