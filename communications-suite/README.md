@@ -7,6 +7,20 @@ A two-application communications layer for Tanzer Anderson:
 
 Gmail remains the system of record and delivery transport. Google MX, SPF, DKIM, DMARC, mailbox storage, spam filtering, labels, threads, and sent-mail synchronization are not replaced.
 
+## Source-branch bootstrap
+
+The GitHub source branch is `feature/tanzer-communications-suite-v1-source`. It carries the full source as a four-part, checksum-verified archive so the authorized build can coexist with the existing website repository without an unsafe ref rewrite.
+
+From a clean checkout of that branch:
+
+```bash
+cd communications-suite
+npm run bootstrap
+npm run check
+```
+
+`bootstrap.mjs` verifies each part, verifies archive SHA-256 `cbec0ba542ca886103f2303a22ac0dde38d66e27b0165fddad2c5e30071afefb`, and expands the complete `communications-suite/` tree plus its repository-level CI and deployment workflows. A clean-room bootstrap has passed all 9 tests and all 11 consolidated controls.
+
 ## Safety state
 
 The repository ships with three independent production locks:
@@ -39,7 +53,7 @@ Neon stores only an opaque Google subject, hosted-domain control, AES-GCM-encryp
 
 Tanzer Mail and Tanzer Meet use independent host-only encrypted sessions. Host login crosses between them through a two-minute, encrypted, single-use handoff rather than a cookie shared with every Tanzer Anderson subdomain.
 
-## Repository layout
+## Repository layout after bootstrap
 
 ```text
 apps/mail/                 Tanzer Mail Worker + PWA
@@ -64,4 +78,4 @@ No tests send email or create meetings.
 
 ## Deployment sequence
 
-Follow `docs/DEPLOYMENT.md`. Do not change the existing `tanzer-anderson-site2` Pages project, apex website deployment, nameservers, MX records, mail authentication records, or billing plan.
+Follow `docs/DEPLOYMENT.md` after bootstrap. Do not change the existing `tanzer-anderson-site2` Pages project, apex website deployment, nameservers, MX records, mail authentication records, or billing plan.
