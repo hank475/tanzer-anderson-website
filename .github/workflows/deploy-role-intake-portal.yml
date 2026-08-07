@@ -35,7 +35,7 @@ jobs:
           mkdir -p site
           wget --recursive --level=inf --page-requisites --adjust-extension --convert-links \
             --no-host-directories --domains=tanzeranderson.com,www.tanzeranderson.com \
-            --directory-prefix=site --user-agent='Tanzer-Anderson-Role-Intake-Release/1.0' \
+            --directory-prefix=site --user-agent='Tanzer-Anderson-Role-Intake-Release/1.1' \
             https://tanzeranderson.com/ || test $? -eq 8
           for path in \
             about/ about/principles/ contact/ private-client/ \
@@ -47,10 +47,17 @@ jobs:
             who-we-advise/healthcare-financial-consumer/ insights/ privacy/ terms/ accessibility/ \
             commercial-talent-sprint/; do
             mkdir -p "site/$path"
-            curl -fsSL "https://tanzeranderson.com/$path" -o "site/${path}index.html"
+            if ! curl -fsSL "https://tanzeranderson.com/$path" -o "site/${path}index.html"; then
+              rm -f "site/${path}index.html"
+              echo "Optional production route unavailable during snapshot: /$path"
+            fi
           done
           curl -fsSL https://tanzeranderson.com/robots.txt -o site/robots.txt
           curl -fsSL https://tanzeranderson.com/sitemap.xml -o site/sitemap.xml
+          test -s site/index.html
+          test -s site/contact/index.html
+          test -s site/privacy/index.html
+          test -s site/terms/index.html
 
       - name: Install private role intake portal
         shell: bash
