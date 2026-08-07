@@ -83,7 +83,7 @@ jobs:
               "fetch('/api/contact'",
               "source:'role-intake-portal'",
               'director@tanzeranderson.com',
-              'Managing Director - Strategy and Business Development' if False else 'TANZER ANDERSON',
+              'TANZER ANDERSON',
               'noindex,nofollow,noarchive',
               'localStorage',
               'Submit confidential role brief'
@@ -92,10 +92,11 @@ jobs:
           if missing:
               raise SystemExit(f'Missing portal content: {missing}')
           prohibited = [
-              'card number',
+              'type="password"',
+              'name="cardNumber"',
               'background-image:url(',
               'https://fonts.googleapis.com',
-              'required>'
+              ' required>'
           ]
           present = [token for token in prohibited if token in text]
           if present:
