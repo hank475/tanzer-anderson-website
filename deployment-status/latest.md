@@ -1,9 +1,9 @@
 # Tanzer Anderson Deployment Status
 
-- Checked at: 2026-08-07T00:31:32Z
-- Deployment workflow run: 31134899378
-- Deployment head SHA: e45eeba19015993bfe47133627a311b54d030715
-- Deployment conclusion: success
+- Checked at: 2026-08-07T00:31:57Z
+- Deployment workflow run: 31134940037
+- Deployment head SHA: b2f80b9099e5e3cdfc0933c8f89d8d346a01635c
+- Deployment conclusion: cancelled
 - Homepage HTTP: 200
 - About HTTP: 200
 - CSS HTTP: 200
