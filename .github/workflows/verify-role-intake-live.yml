@@ -8,12 +8,37 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
-  verify-live-route:
+  inspect-and-verify:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      - name: Inspect latest main-branch deployment runs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api "repos/$GITHUB_REPOSITORY/actions/workflows/328952601/runs?branch=main&event=push&per_page=10" \
+            --jq '.workflow_runs[] | [.id,.run_number,.status,.conclusion,.head_sha,.created_at,.updated_at] | @tsv'
+
+      - name: Inspect latest role-intake run jobs and logs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          run_id=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/328952601/runs?branch=main&event=push&per_page=1" --jq '.workflow_runs[0].id')
+          echo "LATEST_ROLE_INTAKE_RUN=$run_id"
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id/jobs" \
+            --jq '.jobs[] | [.id,.name,.status,.conclusion] | @tsv'
+          job_id=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id/jobs" --jq '.jobs[0].id')
+          echo "LATEST_ROLE_INTAKE_JOB=$job_id"
+          gh api -H 'Accept: application/vnd.github+json' "repos/$GITHUB_REPOSITORY/actions/jobs/$job_id/logs" > /tmp/latest-role-intake-logs.zip
+          unzip -p /tmp/latest-role-intake-logs.zip | tail -n 180 || true
+
       - name: Verify public portal
         shell: bash
         run: |
