@@ -1,0 +1,132 @@
+name: Deploy Private Role Intake Portal
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - cloud/role-intake/**
+      - .github/workflows/deploy-role-intake-portal.yml
+  push:
+    branches: [main]
+    paths:
+      - cloud/role-intake/**
+      - .github/workflows/deploy-role-intake-portal.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tanzer-anderson-role-intake-production
+  cancel-in-progress: false
+
+jobs:
+  build-and-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Capture current production source
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf site
+          mkdir -p site
+          wget --recursive --level=inf --page-requisites --adjust-extension --convert-links \
+            --no-host-directories --domains=tanzeranderson.com,www.tanzeranderson.com \
+            --directory-prefix=site --user-agent='Tanzer-Anderson-Role-Intake-Release/1.0' \
+            https://tanzeranderson.com/ || test $? -eq 8
+          for path in \
+            about/ about/principles/ contact/ private-client/ \
+            private-client/search-command/ private-client/candidate-intelligence/ private-client/decisions-outcomes/ \
+            what-we-do/ what-we-do/executive-search/ what-we-do/professional-staffing/ \
+            what-we-do/talent-advisory/ what-we-do/market-intelligence/ approach/ \
+            who-we-advise/ceos-boards-executive-teams/ who-we-advise/private-equity-portfolio-companies/ \
+            who-we-advise/technology-ai-cybersecurity/ who-we-advise/engineering-industrial-infrastructure/ \
+            who-we-advise/healthcare-financial-consumer/ insights/ privacy/ terms/ accessibility/ \
+            commercial-talent-sprint/; do
+            mkdir -p "site/$path"
+            curl -fsSL "https://tanzeranderson.com/$path" -o "site/${path}index.html"
+          done
+          curl -fsSL https://tanzeranderson.com/robots.txt -o site/robots.txt
+          curl -fsSL https://tanzeranderson.com/sitemap.xml -o site/sitemap.xml
+
+      - name: Install private role intake portal
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p site/role-intake
+          cp cloud/role-intake/index.html site/role-intake/index.html
+
+      - name: Consolidated portal QA
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m json.tool cloud/role-intake/schema.json >/dev/null
+          python3 - <<'PY'
+          from pathlib import Path
+
+          page = Path('site/role-intake/index.html')
+          if not page.exists() or page.stat().st_size == 0:
+              raise SystemExit('Role intake portal output is missing')
+          text = page.read_text(encoding='utf-8')
+          required = [
+              'Private role brief',
+              'Role Intake Portal',
+              'Role title',
+              'Salary or compensation range',
+              'On-site',
+              'Hybrid',
+              'Remote',
+              'Additional notes',
+              "fetch('/api/contact'",
+              "source:'role-intake-portal'",
+              'director@tanzeranderson.com',
+              'Managing Director - Strategy and Business Development' if False else 'TANZER ANDERSON',
+              'noindex,nofollow,noarchive',
+              'localStorage',
+              'Submit confidential role brief'
+          ]
+          missing = [token for token in required if token not in text]
+          if missing:
+              raise SystemExit(f'Missing portal content: {missing}')
+          prohibited = [
+              'card number',
+              'background-image:url(',
+              'https://fonts.googleapis.com',
+              'required>'
+          ]
+          present = [token for token in prohibited if token in text]
+          if present:
+              raise SystemExit(f'Prohibited portal content: {present}')
+          if text.count('name="workArrangement"') != 4:
+              raise SystemExit('Work-arrangement controls are incomplete')
+          print('Private role intake portal QA: PASS')
+          PY
+
+      - name: Deploy to Cloudflare Pages production
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          npx --yes wrangler@latest pages deploy site --project-name=tanzer-anderson-site2 --branch=main --commit-dirty=true
+
+      - name: Production verification
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        shell: bash
+        run: |
+          set -euo pipefail
+          sleep 15
+          code=$(curl -sS -o /tmp/role-intake -w '%{http_code}' https://tanzeranderson.com/role-intake/)
+          test "$code" = "200"
+          grep -q 'Role Intake Portal' /tmp/role-intake
+          grep -q 'Submit confidential role brief' /tmp/role-intake
+          grep -q "fetch('/api/contact'" /tmp/role-intake
+          grep -q 'noindex,nofollow,noarchive' /tmp/role-intake
+          echo 'Private role intake portal production verification: PASS'
