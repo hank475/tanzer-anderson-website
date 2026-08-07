@@ -1,0 +1,88 @@
+name: Verify Cerebras First-Contact Canvases
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/verify-cerebras-first-contact-canvases.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: verify-cerebras-first-contact-canvases
+  cancel-in-progress: false
+
+jobs:
+  verify-and-record:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify exact-render production assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          origin='https://tanzer-private-monograph-canvas-v4.pages.dev'
+          mkdir -p /tmp/cerebras-canvases
+          verify_asset() {
+            route="$1"
+            file="$2"
+            for attempt in $(seq 1 20); do
+              if curl -fsSL "$origin$route" -o "$file"; then
+                content_type=$(curl -fsSI "$origin$route" | tr -d '\r' | awk -F': ' 'tolower($1)=="content-type"{print tolower($2)}' | tail -1)
+                if [[ "$content_type" == image/jpeg* ]] && file "$file" | grep -q 'JPEG image data' && [[ $(stat -c%s "$file") -gt 150000 ]]; then
+                  return 0
+                fi
+              fi
+              sleep 15
+            done
+            echo "Verification failed for $route" >&2
+            return 1
+          }
+          verify_asset '/prospects/cerebras-kaitlynn-hess.jpg' '/tmp/cerebras-canvases/kaitlynn.jpg'
+          verify_asset '/prospects/cerebras-jodi-lemos.jpg' '/tmp/cerebras-canvases/jodi.jpg'
+          verify_asset '/prospects/cerebras-indira-dewinter.jpg' '/tmp/cerebras-canvases/indira.jpg'
+          sha256sum /tmp/cerebras-canvases/*.jpg > /tmp/cerebras-canvases/SHA256SUMS.txt
+
+      - name: Record immutable deployment receipt
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p deployment-status
+          checked_at=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+          cat > deployment-status/cerebras-first-contact-canvas-v4.md <<EOF
+          # Cerebras First-Contact Canvas v4 Deployment Receipt
+
+          - Checked at: ${checked_at}
+          - Verification workflow SHA: ${GITHUB_SHA}
+          - Result: PASS
+          - Primary contact: Kaitlynn Hess
+          - Secondary contact: Jodi Lemos
+          - Escalation contact: Indira DeWinter
+          - External prospect messages sent: 0
+          - External release authorized: false
+
+          ## Verified production assets
+
+          - https://tanzer-private-monograph-canvas-v4.pages.dev/prospects/cerebras-kaitlynn-hess.jpg
+          - https://tanzer-private-monograph-canvas-v4.pages.dev/prospects/cerebras-jodi-lemos.jpg
+          - https://tanzer-private-monograph-canvas-v4.pages.dev/prospects/cerebras-indira-dewinter.jpg
+
+          ## SHA-256
+
+          \`\`\`
+          $(cat /tmp/cerebras-canvases/SHA256SUMS.txt)
+          \`\`\`
+          EOF
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add deployment-status/cerebras-first-contact-canvas-v4.md
+          git diff --cached --check
+          git commit -m 'chore: record Cerebras Canvas v4 deployment verification'
+          git pull --rebase origin main
+          git push origin HEAD:main
