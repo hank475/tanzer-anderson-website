@@ -1,0 +1,99 @@
+name: Patch production deployer for role-intake portal
+
+on:
+  push:
+    branches:
+      - fix/deploy-role-intake-with-production-workflow
+    paths:
+      - .github/workflows/patch-cosmetic-deployer-role-intake.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/deploy-role-intake-with-production-workflow
+          fetch-depth: 0
+
+      - name: Patch proven production workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('.github/workflows/deploy-approved-cosmetic-pass-v2.yml')
+          text = path.read_text(encoding='utf-8')
+          if 'Install private role intake portal' in text:
+              raise SystemExit('Production deployer is already patched')
+
+          text = text.replace(
+              "    paths:\n      - .github/workflows/deploy-approved-cosmetic-pass-v2.yml",
+              "    paths:\n      - .github/workflows/deploy-approved-cosmetic-pass-v2.yml\n      - cloud/role-intake/**"
+          )
+
+          marker = "      - name: Install approved hero image\n"
+          insertion = """      - name: Install private role intake portal
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p site/role-intake
+          cp cloud/role-intake/index.html site/role-intake/index.html
+          python3 -m json.tool cloud/role-intake/schema.json >/dev/null
+
+"""
+          if marker not in text:
+              raise SystemExit('Hero-install marker not found')
+          text = text.replace(marker, insertion + marker, 1)
+
+          text = text.replace(
+              "              root/'private-client/decisions-outcomes/index.html',\n          ]",
+              "              root/'private-client/decisions-outcomes/index.html',\n              root/'role-intake/index.html',\n          ]"
+          )
+
+          qa_marker = "          print('Cosmetic pass QA: PASS')"
+          qa_insert = """          portal = (root/'role-intake/index.html').read_text(encoding='utf-8')
+          for token in (
+              'Role Intake Portal',
+              'Salary or compensation range',
+              'name=\"workArrangement\"',
+              'Submit confidential role brief',
+              "fetch('/api/contact'",
+              'noindex,nofollow,noarchive',
+          ):
+              if token not in portal:
+                  raise SystemExit(f'Role-intake portal QA failed: {token}')
+          print('Cosmetic pass and role-intake portal QA: PASS')"""
+          if qa_marker not in text:
+              raise SystemExit('QA completion marker not found')
+          text = text.replace(qa_marker, qa_insert, 1)
+
+          text = text.replace(
+              "          for route in / /about/ /contact/ /private-client/search-command/; do",
+              "          for route in / /about/ /contact/ /private-client/search-command/ /role-intake/; do"
+          )
+          text = text.replace(
+              "          curl -fsSL https://tanzeranderson.com/about/ | grep -q 'Evidence Over Theater'\n          echo 'Production cosmetic verification: PASS'",
+              "          curl -fsSL https://tanzeranderson.com/about/ | grep -q 'Evidence Over Theater'\n          curl -fsSL https://tanzeranderson.com/role-intake/ | grep -q 'Role Intake Portal'\n          curl -fsSL https://tanzeranderson.com/role-intake/ | grep -q 'Submit confidential role brief'\n          echo 'Production cosmetic and role-intake verification: PASS'"
+          )
+
+          path.write_text(text, encoding='utf-8')
+          PY
+          grep -q 'Install private role intake portal' .github/workflows/deploy-approved-cosmetic-pass-v2.yml
+          grep -q 'cloud/role-intake/\*\*' .github/workflows/deploy-approved-cosmetic-pass-v2.yml
+          grep -q '/role-intake/' .github/workflows/deploy-approved-cosmetic-pass-v2.yml
+
+      - name: Commit patched production workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .github/workflows/deploy-approved-cosmetic-pass-v2.yml
+          git commit -m 'Deploy private role-intake portal through proven production workflow'
+          git push origin HEAD:fix/deploy-role-intake-with-production-workflow
