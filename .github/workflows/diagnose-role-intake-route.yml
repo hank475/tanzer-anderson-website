@@ -10,6 +10,7 @@ on:
 permissions:
   contents: read
   actions: read
+  pages: read
 
 jobs:
   diagnose:
@@ -34,13 +35,12 @@ jobs:
 
           job_id=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id/jobs?per_page=100" --jq '.jobs[0].id')
           echo "LATEST_JOB_ID=$job_id"
-          gh api -H 'Accept: application/vnd.github+json' "repos/$GITHUB_REPOSITORY/actions/jobs/$job_id/logs" > /tmp/role-intake-job.zip
+          gh api -H 'Accept: application/vnd.github+json' "repos/$GITHUB_REPOSITORY/actions/jobs/$job_id/logs" > /tmp/role-intake-job.log
           echo 'RELEVANT LOG EXCERPT'
-          unzip -p /tmp/role-intake-job.zip \
-            | grep -Ei 'error|fail|wrangler|pages deploy|portal propagation|HTTP [0-9]{3}|exit code|cloudflare|role intake' \
-            | tail -n 240 || true
+          grep -Ei 'error|fail|wrangler|pages deploy|portal propagation|HTTP [0-9]{3}|exit code|cloudflare|role intake|CLOUDFLARE_API_TOKEN|CLOUDFLARE_ACCOUNT_ID' \
+            /tmp/role-intake-job.log | tail -n 240 || true
 
-      - name: Verify the public route independently
+      - name: Verify the current public route
         shell: bash
         run: |
           set -euo pipefail
@@ -56,4 +56,22 @@ jobs:
             else
               echo 'PORTAL_MARKER=false'
             fi
+          done
+
+      - name: Inspect GitHub Pages fallback
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo 'GITHUB PAGES CONFIGURATION'
+          gh api "repos/$GITHUB_REPOSITORY/pages" \
+            --jq '[.status,.html_url,.source.branch,.source.path,.build_type] | @tsv' || true
+          for url in \
+            'https://hank475.github.io/tanzer-anderson-website/' \
+            'https://hank475.github.io/tanzer-anderson-website/role-intake/'; do
+            code=$(curl -sS -L -o /tmp/pages-page -w '%{http_code}' "$url" || true)
+            bytes=$(wc -c < /tmp/pages-page 2>/dev/null || echo 0)
+            title=$(grep -o '<title>[^<]*' /tmp/pages-page 2>/dev/null | head -1 || true)
+            echo "URL=$url HTTP=$code BYTES=$bytes TITLE=$title"
           done
