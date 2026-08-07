@@ -5,7 +5,10 @@ const path = require('path');
 const vm = require('vm');
 
 const root = __dirname;
-const source = fs.readFileSync(path.join(root, 'Code.gs'), 'utf8');
+const source = [
+  fs.readFileSync(path.join(root, 'Code.gs'), 'utf8'),
+  fs.readFileSync(path.join(root, 'PortalIntegration.gs'), 'utf8')
+].join('\n\n');
 
 global.Utilities = {
   newBlob(value) {
@@ -17,11 +20,14 @@ global.Utilities = {
   }
 };
 
-vm.runInThisContext(source, {filename: 'Code.gs'});
+vm.runInThisContext(source, {filename: 'max-safe-portal.js'});
 
 const payload = normalizeV9_(samplePayloadV9_());
-const markup = buildMaxSafeHtmlV9_(payload);
-validateMaxSafeV9_(markup);
+payload.reference = 'ABCDEF12';
+const baseMarkup = buildMaxSafeHtmlV9_(payload);
+validateMaxSafeV9_(baseMarkup);
+const markup = addRoleIntakePortalV10_(baseMarkup, payload);
+validateMaxSafePortalV10_(markup);
 
 const lowered = markup.toLowerCase();
 const forbidden = [
@@ -29,11 +35,10 @@ const forbidden = [
   '@media', '<script', 'display:flex', 'display:grid', 'position:absolute',
   'position:fixed', 'transform:'
 ];
-
 for (const token of forbidden) {
-  if (lowered.includes(token)) throw new Error(`Max Safe V9 contains forbidden token: ${token}`);
+  if (lowered.includes(token)) throw new Error(`Max Safe Portal contains forbidden token: ${token}`);
 }
-if (/\bring\b/i.test(markup)) throw new Error('Max Safe V9 contains the prohibited word "ring".');
+if (/\bring\b/i.test(markup)) throw new Error('Max Safe Portal contains the prohibited word "ring".');
 if (!markup.includes('Dear Henry,')) throw new Error('Personalized greeting missing.');
 if (!markup.includes('Rather than send a general agency pitch I’d suggest')) throw new Error('Approved opening missing.');
 if (!markup.includes('PROOF OF CONCEPT')) throw new Error('Proof map missing.');
@@ -48,13 +53,13 @@ if (!markup.includes('class="ta-role-cta"')) throw new Error('Role-intake CTA cl
 if (!markup.includes('.ta-role-cta:hover')) throw new Error('Progressive hover rule missing.');
 
 const bytes = Buffer.byteLength(markup, 'utf8');
-if (bytes >= 50000) throw new Error(`Max Safe V9 exceeds 50 KB: ${bytes}`);
+if (bytes >= 50000) throw new Error(`Max Safe Portal exceeds 50 KB: ${bytes}`);
 
 fs.mkdirSync(path.join(root, 'artifacts'), {recursive: true});
-fs.writeFileSync(path.join(root, 'artifacts', 'max-safe-v9.html'), markup);
+fs.writeFileSync(path.join(root, 'artifacts', 'max-safe-portal.html'), markup);
 
 const receipt = {
-  version: 'TA_MAX_SAFE_V9',
+  version: 'TA_MAX_SAFE_V10_PORTAL',
   bytes,
   forbidden_tokens: 0,
   prohibited_copy_terms: 0,
