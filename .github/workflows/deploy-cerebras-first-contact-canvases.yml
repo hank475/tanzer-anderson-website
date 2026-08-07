@@ -1,0 +1,166 @@
+name: Deploy Cerebras First-Contact Canvases
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - cloud/cerebras-first-contact/**
+      - .github/workflows/deploy-cerebras-first-contact-canvases.yml
+  push:
+    branches: [main]
+    paths:
+      - cloud/cerebras-first-contact/**
+      - .github/workflows/deploy-cerebras-first-contact-canvases.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tanzer-private-monograph-canvas-v4-production
+  cancel-in-progress: false
+
+env:
+  CLOUDFLARE_PAGES_PROJECT: tanzer-private-monograph-canvas-v4
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install deterministic render dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends fonts-ebgaramond fonts-inter fonts-urw-base35 file
+          python3 -m pip install --quiet pillow numpy
+
+      - name: Validate message source and renderers
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile \
+            cloud/private-monograph-canvas-v4/render_canvas.py \
+            cloud/private-monograph-canvas-v4/render_batch.py \
+            cloud/cerebras-first-contact/render_cerebras.py
+          python3 -m json.tool cloud/private-monograph-canvas-v4/messages.json >/dev/null
+          python3 -m json.tool cloud/cerebras-first-contact/messages.json >/dev/null
+          test "$(python3 - <<'PY'
+          import json
+          from pathlib import Path
+          base = json.loads(Path('cloud/private-monograph-canvas-v4/messages.json').read_text())
+          cerebras = json.loads(Path('cloud/cerebras-first-contact/messages.json').read_text())
+          print(len(base['records']) + len(cerebras['records']))
+          PY
+          )" = "23"
+          grep -q 'Hello {record' cloud/cerebras-first-contact/render_cerebras.py
+          grep -q 'director@tanzeranderson.com' cloud/cerebras-first-contact/render_cerebras.py
+          grep -q 'No candidate contacted, represented, or submitted' cloud/cerebras-first-contact/messages.json
+          if grep -Eq '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}' cloud/cerebras-first-contact/messages.json; then
+            echo 'Public Cerebras render source unexpectedly contains recipient email addresses.' >&2
+            exit 1
+          fi
+
+      - name: Render complete Canvas v4 library
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf dist
+          mkdir -p dist/prospects
+          python3 cloud/private-monograph-canvas-v4/render_canvas.py \
+            --output dist/private-monograph-canvas-v4.jpg
+          python3 cloud/private-monograph-canvas-v4/render_batch.py \
+            --messages cloud/private-monograph-canvas-v4/messages.json \
+            --output-dir dist/prospects
+          python3 cloud/cerebras-first-contact/render_cerebras.py \
+            --messages cloud/cerebras-first-contact/messages.json \
+            --output-dir dist/prospects
+          cp cloud/private-monograph-canvas-v4/index.html dist/index.html
+          cp cloud/private-monograph-canvas-v4/_headers dist/_headers
+
+      - name: Consolidated visual and release QA
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s dist/private-monograph-canvas-v4.jpg
+          prospect_count=$(find dist/prospects -maxdepth 1 -type f -name '*.jpg' | wc -l | tr -d ' ')
+          test "$prospect_count" = "23"
+          for image in dist/prospects/*.jpg; do
+            test "$(stat -c%s "$image")" -gt 150000
+            file "$image" | grep -q 'JPEG image data'
+          done
+          for required in \
+            dist/prospects/cerebras-kaitlynn-hess.jpg \
+            dist/prospects/cerebras-jodi-lemos.jpg \
+            dist/prospects/cerebras-indira-dewinter.jpg; do
+            test -s "$required"
+          done
+          grep -q '/prospects/\*' dist/_headers
+          grep -q 'noindex' dist/_headers
+          echo 'Cerebras first-contact Canvas v4 QA: PASS — 3 exact-render messages; external release not performed'
+
+      - name: Ensure Cloudflare Pages project
+        if: github.event_name != 'pull_request'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          endpoint="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/${CLOUDFLARE_PAGES_PROJECT}"
+          status=$(curl -sS -o /tmp/project.json -w '%{http_code}' \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            -H 'Content-Type: application/json' \
+            "$endpoint")
+          if [ "$status" = "404" ]; then
+            curl -fsS -X POST \
+              -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+              -H 'Content-Type: application/json' \
+              --data "{\"name\":\"${CLOUDFLARE_PAGES_PROJECT}\",\"production_branch\":\"main\"}" \
+              "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects" \
+              > /tmp/project-created.json
+          elif [ "$status" != "200" ]; then
+            cat /tmp/project.json >&2
+            exit 1
+          fi
+
+      - name: Deploy complete Canvas v4 library
+        if: github.event_name != 'pull_request'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@latest pages deploy dist \
+            --project-name="$CLOUDFLARE_PAGES_PROJECT" \
+            --branch=main \
+            --commit-dirty=true
+
+      - name: Verify Cerebras canvases in production
+        if: github.event_name != 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          sleep 15
+          origin="https://${CLOUDFLARE_PAGES_PROJECT}.pages.dev"
+          for route in \
+            /prospects/cerebras-kaitlynn-hess.jpg \
+            /prospects/cerebras-jodi-lemos.jpg \
+            /prospects/cerebras-indira-dewinter.jpg; do
+            headers=$(curl -fsSI "$origin$route" | tr -d '\r')
+            grep -qi '^content-type: image/jpeg' <<< "$headers"
+            grep -qi '^cache-control:.*immutable' <<< "$headers"
+          done
+          {
+            echo '## Cerebras first-contact Canvas v4'
+            echo "Primary: ${origin}/prospects/cerebras-kaitlynn-hess.jpg"
+            echo "Recruiting champion: ${origin}/prospects/cerebras-jodi-lemos.jpg"
+            echo "People-leadership escalation: ${origin}/prospects/cerebras-indira-dewinter.jpg"
+            echo 'Deployment verification: PASS'
+          } >> "$GITHUB_STEP_SUMMARY"
