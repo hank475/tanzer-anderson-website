@@ -14,7 +14,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: tanzer-anderson-role-intake-production
@@ -26,6 +26,8 @@ jobs:
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Capture current production source
         shell: bash
@@ -35,7 +37,7 @@ jobs:
           mkdir -p site
           wget --recursive --level=inf --page-requisites --adjust-extension --convert-links \
             --no-host-directories --domains=tanzeranderson.com,www.tanzeranderson.com \
-            --directory-prefix=site --user-agent='Tanzer-Anderson-Role-Intake-Release/1.1' \
+            --directory-prefix=site --user-agent='Tanzer-Anderson-Role-Intake-Release/1.2' \
             https://tanzeranderson.com/ || test $? -eq 8
           for path in \
             about/ about/principles/ contact/ private-client/ \
@@ -138,3 +140,29 @@ jobs:
           grep -q "fetch('/api/contact'" /tmp/role-intake
           grep -q 'noindex,nofollow,noarchive' /tmp/role-intake
           echo 'Private role intake portal production verification: PASS'
+
+      - name: Record verified deployment
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p deployment-status
+          cat > deployment-status/role-intake-latest.md <<EOF
+          # Private Role Intake Portal — Production Verification
+
+          - Checked at: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+          - Workflow run: $GITHUB_RUN_ID
+          - Deployment head SHA: $GITHUB_SHA
+          - Route: https://tanzeranderson.com/role-intake/
+          - HTTP status: 200
+          - Portal title: PASS
+          - Submission control: PASS
+          - Noindex control: PASS
+          - Result: production verified
+          EOF
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add deployment-status/role-intake-latest.md
+          git commit -m 'chore: record role-intake production verification'
+          git pull --rebase origin main
+          git push origin HEAD:main
