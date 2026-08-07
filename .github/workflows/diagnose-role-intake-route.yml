@@ -1,0 +1,59 @@
+name: Diagnose Role Intake Route
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/diagnose-role-intake-route.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Inspect latest role-intake deployment runs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo 'LATEST ROLE-INTAKE WORKFLOW RUNS'
+          gh api "repos/$GITHUB_REPOSITORY/actions/workflows/328952601/runs?branch=main&event=push&per_page=8" \
+            --jq '.workflow_runs[] | [.id,.run_number,.status,.conclusion,.head_sha,.created_at,.updated_at] | @tsv'
+
+          run_id=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/328952601/runs?branch=main&event=push&per_page=1" --jq '.workflow_runs[0].id')
+          echo "LATEST_RUN_ID=$run_id"
+          echo 'LATEST RUN JOBS'
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id/jobs?per_page=100" \
+            --jq '.jobs[] | [.id,.name,.status,.conclusion] | @tsv'
+
+          job_id=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id/jobs?per_page=100" --jq '.jobs[0].id')
+          echo "LATEST_JOB_ID=$job_id"
+          gh api -H 'Accept: application/vnd.github+json' "repos/$GITHUB_REPOSITORY/actions/jobs/$job_id/logs" > /tmp/role-intake-job.zip
+          echo 'RELEVANT LOG EXCERPT'
+          unzip -p /tmp/role-intake-job.zip \
+            | grep -Ei 'error|fail|wrangler|pages deploy|portal propagation|HTTP [0-9]{3}|exit code|cloudflare|role intake' \
+            | tail -n 240 || true
+
+      - name: Verify the public route independently
+        shell: bash
+        run: |
+          set -euo pipefail
+          for url in \
+            'https://tanzeranderson.com/role-intake/' \
+            'https://tanzeranderson.com/role-intake/?contact=Henry&company=Tanzer%20Anderson&role=Principal%20Enterprise%20Security%20Engineer&source=internal-qa'; do
+            code=$(curl -sS -L -o /tmp/role-page -w '%{http_code}' "$url" || true)
+            bytes=$(wc -c < /tmp/role-page 2>/dev/null || echo 0)
+            title=$(grep -o '<title>[^<]*' /tmp/role-page 2>/dev/null | head -1 || true)
+            echo "URL=$url HTTP=$code BYTES=$bytes TITLE=$title"
+            if grep -q 'Role Intake Portal' /tmp/role-page; then
+              echo 'PORTAL_MARKER=true'
+            else
+              echo 'PORTAL_MARKER=false'
+            fi
+          done
