@@ -1,0 +1,32 @@
+name: Verify Private Role Intake Portal Live
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/verify-role-intake-live.yml
+
+permissions:
+  contents: read
+
+jobs:
+  verify-live-route:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify public portal
+        shell: bash
+        run: |
+          set -euo pipefail
+          code=$(curl -sS -L -o /tmp/role-intake -w '%{http_code}' 'https://tanzeranderson.com/role-intake/?contact=Henry&company=Tanzer%20Anderson&role=Principal%20Enterprise%20Security%20Engineer&source=internal-qa')
+          echo "HTTP $code"
+          test "$code" = "200"
+          grep -q 'Role Intake Portal' /tmp/role-intake
+          grep -q 'Salary or compensation range' /tmp/role-intake
+          grep -q 'On-site' /tmp/role-intake
+          grep -q 'Hybrid' /tmp/role-intake
+          grep -q 'Remote' /tmp/role-intake
+          grep -q 'Submit confidential role brief' /tmp/role-intake
+          grep -q "fetch('/api/contact'" /tmp/role-intake
+          grep -q 'noindex,nofollow,noarchive' /tmp/role-intake
+          echo 'PRIVATE ROLE INTAKE PORTAL: LIVE AND VERIFIED'
