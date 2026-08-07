@@ -58,7 +58,7 @@ jobs:
             fi
           done
 
-      - name: Inspect GitHub Pages fallback
+      - name: Inspect fallback publisher and GitHub Pages route
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -67,11 +67,32 @@ jobs:
           echo 'GITHUB PAGES CONFIGURATION'
           gh api "repos/$GITHUB_REPOSITORY/pages" \
             --jq '[.status,.html_url,.source.branch,.source.path,.build_type] | @tsv' || true
+
+          workflow_id=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows?per_page=100" \
+            --jq '.workflows[] | select(.name=="Publish Role Intake GitHub Pages Fallback") | .id' | head -1)
+          echo "FALLBACK_WORKFLOW_ID=${workflow_id:-missing}"
+          if [ -n "${workflow_id:-}" ]; then
+            gh api "repos/$GITHUB_REPOSITORY/actions/workflows/$workflow_id/runs?branch=main&event=push&per_page=5" \
+              --jq '.workflow_runs[] | [.id,.run_number,.status,.conclusion,.head_sha,.created_at,.updated_at] | @tsv' || true
+            fallback_run=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/$workflow_id/runs?branch=main&event=push&per_page=1" --jq '.workflow_runs[0].id // empty')
+            if [ -n "${fallback_run:-}" ]; then
+              echo "FALLBACK_RUN_ID=$fallback_run"
+              gh api "repos/$GITHUB_REPOSITORY/actions/runs/$fallback_run/jobs?per_page=100" \
+                --jq '.jobs[] | [.id,.name,.status,.conclusion] | @tsv' || true
+            fi
+          fi
+
+          echo 'GH-PAGES FILE CHECK'
+          gh api "repos/$GITHUB_REPOSITORY/contents/role-intake/index.html?ref=gh-pages" \
+            --jq '[.path,.size,.sha] | @tsv' || true
+
           for url in \
             'https://hank475.github.io/tanzer-anderson-website/' \
             'https://hank475.github.io/tanzer-anderson-website/role-intake/'; do
             code=$(curl -sS -L -o /tmp/pages-page -w '%{http_code}' "$url" || true)
             bytes=$(wc -c < /tmp/pages-page 2>/dev/null || echo 0)
             title=$(grep -o '<title>[^<]*' /tmp/pages-page 2>/dev/null | head -1 || true)
-            echo "URL=$url HTTP=$code BYTES=$bytes TITLE=$title"
+            marker=false
+            grep -q 'Role Intake Portal' /tmp/pages-page && marker=true || true
+            echo "URL=$url HTTP=$code BYTES=$bytes TITLE=$title PORTAL_MARKER=$marker"
           done
