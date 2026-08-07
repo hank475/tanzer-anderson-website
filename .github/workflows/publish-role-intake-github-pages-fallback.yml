@@ -1,0 +1,66 @@
+name: Publish Role Intake GitHub Pages Fallback
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/publish-role-intake-github-pages-fallback.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: tanzer-anderson-role-intake-github-pages-fallback
+  cancel-in-progress: false
+
+jobs:
+  publish-and-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Publish portal beneath the existing GitHub Pages site
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s cloud/role-intake/index.html
+          cp cloud/role-intake/index.html /tmp/role-intake.html
+          git fetch origin gh-pages
+          rm -rf /tmp/ta-gh-pages
+          git worktree add /tmp/ta-gh-pages origin/gh-pages
+          mkdir -p /tmp/ta-gh-pages/role-intake
+          cp /tmp/role-intake.html /tmp/ta-gh-pages/role-intake/index.html
+          touch /tmp/ta-gh-pages/.nojekyll
+          cd /tmp/ta-gh-pages
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add role-intake/index.html .nojekyll
+          if ! git diff --cached --quiet; then
+            git commit -m 'publish: private role-intake fallback'
+            git push origin HEAD:gh-pages
+          fi
+
+      - name: Verify fallback route
+        shell: bash
+        run: |
+          set -euo pipefail
+          url='https://hank475.github.io/tanzer-anderson-website/role-intake/'
+          verified=false
+          for attempt in $(seq 1 24); do
+            code=$(curl -sS -L -o /tmp/role-intake -w '%{http_code}' "$url" || true)
+            if [ "$code" = '200' ] \
+              && grep -q 'Role Intake Portal' /tmp/role-intake \
+              && grep -q 'Submit confidential role brief' /tmp/role-intake \
+              && grep -q 'noindex,nofollow,noarchive' /tmp/role-intake; then
+              verified=true
+              break
+            fi
+            echo "Fallback propagation check $attempt/24 returned HTTP $code; retrying."
+            sleep 10
+          done
+          test "$verified" = 'true'
+          echo 'ROLE INTAKE GITHUB PAGES FALLBACK: LIVE AND VERIFIED'
