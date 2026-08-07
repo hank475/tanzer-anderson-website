@@ -1,5 +1,5 @@
 {
-  "policy_id": "TA_MAX_SAFE_V9",
+  "policy_id": "TA_MAX_SAFE_V10_PORTAL",
   "status": "staged_for_internal_visual_qa",
   "effective_date": "2026-08-06",
   "scope": "all_first_touch_email_generated_for_henry",
@@ -28,6 +28,22 @@
     "signature_color": "#0B2A4A",
     "signature_presentation": "thin_right_slanted_cursive_fallback_stack"
   },
+  "portal_cta": {
+    "label": "REPLY WITH ONE ROLE",
+    "url": "https://tanzeranderson.com/role-intake/",
+    "personalized_query_prefill": [
+      "contact",
+      "company",
+      "email",
+      "role",
+      "ref",
+      "source"
+    ],
+    "base_link_required": true,
+    "progressive_hover_lift_px": 2,
+    "hover_support_is_best_effort": true,
+    "link_must_work_without_hover": true
+  },
   "prohibited_copy": [
     "ring"
   ],
@@ -46,6 +62,11 @@
     "absolute_positioning",
     "css_transforms",
     "media_queries"
+  ],
+  "allowed_progressive_css": [
+    "scoped_anchor_hover_position_relative",
+    "scoped_anchor_hover_top_negative_two_pixels",
+    "scoped_anchor_hover_box_shadow"
   ],
   "delivery": {
     "mime": "multipart/alternative",
@@ -70,6 +91,7 @@
     "external_send_requires_henry_release": true,
     "automatic_external_send": false,
     "recipient_route_must_be_verified": true,
+    "candidate_outreach_triggered_by_portal": false,
     "gmail_mobile_test_required": true,
     "outlook_mobile_test_required": true
   }
