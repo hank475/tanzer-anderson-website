@@ -1,0 +1,99 @@
+name: Activate Private Role Intake Portal
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/activate-role-intake-production.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: activate-private-role-intake-production
+  cancel-in-progress: false
+
+jobs:
+  deploy-and-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Capture current production site
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf site
+          mkdir -p site
+          wget --recursive --level=inf --page-requisites --adjust-extension --convert-links \
+            --no-host-directories --domains=tanzeranderson.com,www.tanzeranderson.com \
+            --directory-prefix=site --user-agent='Tanzer-Anderson-Role-Intake-Activation/1.0' \
+            https://tanzeranderson.com/ || test $? -eq 8
+          for path in \
+            about/ about/principles/ contact/ private-client/ \
+            private-client/search-command/ private-client/candidate-intelligence/ private-client/decisions-outcomes/ \
+            what-we-do/ what-we-do/executive-search/ what-we-do/professional-staffing/ \
+            what-we-do/talent-advisory/ what-we-do/market-intelligence/ approach/ \
+            who-we-advise/ceos-boards-executive-teams/ who-we-advise/private-equity-portfolio-companies/ \
+            who-we-advise/technology-ai-cybersecurity/ who-we-advise/engineering-industrial-infrastructure/ \
+            who-we-advise/healthcare-financial-consumer/ insights/ privacy/ terms/ accessibility/ \
+            commercial-talent-sprint/; do
+            mkdir -p "site/$path"
+            if ! curl -fsSL "https://tanzeranderson.com/$path" -o "site/${path}index.html"; then
+              rm -f "site/${path}index.html"
+              echo "Optional route unavailable during snapshot: /$path"
+            fi
+          done
+          curl -fsSL https://tanzeranderson.com/robots.txt -o site/robots.txt
+          curl -fsSL https://tanzeranderson.com/sitemap.xml -o site/sitemap.xml
+          test -s site/index.html
+          test -s site/contact/index.html
+          test -s site/privacy/index.html
+          test -s site/terms/index.html
+
+      - name: Install and inspect private portal
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p site/role-intake
+          cp cloud/role-intake/index.html site/role-intake/index.html
+          python3 -m json.tool cloud/role-intake/schema.json >/dev/null
+          grep -q 'Role Intake Portal' site/role-intake/index.html
+          grep -q 'Salary or compensation range' site/role-intake/index.html
+          grep -q 'name="workArrangement"' site/role-intake/index.html
+          grep -q "fetch('/api/contact'" site/role-intake/index.html
+          grep -q 'noindex,nofollow,noarchive' site/role-intake/index.html
+
+      - name: Deploy to Cloudflare Pages production
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          npx --yes wrangler@latest pages deploy site --project-name=tanzer-anderson-site2 --branch=main --commit-dirty=true
+
+      - name: Verify custom-domain production route
+        shell: bash
+        run: |
+          set -euo pipefail
+          verified=false
+          for attempt in $(seq 1 18); do
+            code=$(curl -sS -o /tmp/role-intake -w '%{http_code}' https://tanzeranderson.com/role-intake/ || true)
+            if [ "$code" = "200" ] \
+              && grep -q 'Role Intake Portal' /tmp/role-intake \
+              && grep -q 'Submit confidential role brief' /tmp/role-intake \
+              && grep -q "fetch('/api/contact'" /tmp/role-intake \
+              && grep -q 'noindex,nofollow,noarchive' /tmp/role-intake; then
+              verified=true
+              break
+            fi
+            echo "Verification $attempt/18 returned HTTP $code; retrying."
+            sleep 10
+          done
+          test "$verified" = "true"
+          echo 'PRIVATE ROLE INTAKE PORTAL PRODUCTION: PASS'
