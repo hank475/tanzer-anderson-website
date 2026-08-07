@@ -1,6 +1,6 @@
-# Tanzer Anderson Max Safe V9
+# Tanzer Anderson Max Safe Portal
 
-Max Safe V9 is the canonical first-touch email standard for Henry Anderson.
+Max Safe Portal is the canonical first-touch email standard for Henry Anderson.
 
 The textured, image-based, CID, data-URI and exact-body email experiments are halted. Their visual language is retained for later PDF communications, where a recipient has already established enough trust to open an attachment or hosted document.
 
@@ -19,6 +19,25 @@ The textured, image-based, CID, data-URI and exact-body email experiments are ha
 
 The word `ring` is prohibited. The proof map uses direct-market, adjacent-market, capability and evidence labels instead.
 
+## Role-intake CTA
+
+**Reply with one role** is a real link to:
+
+`https://tanzeranderson.com/role-intake/`
+
+Each generated link can prefill:
+
+- recipient first name;
+- company;
+- recipient business email;
+- role title;
+- campaign reference;
+- source attribution.
+
+The button has a stable inline presentation in every supported client. A tightly scoped `:hover` rule raises the button by two pixels and adds a deeper shadow in clients that honor email hover CSS. Clients that ignore hover still display a working gold CTA and open the same portal.
+
+The portal lets the recipient provide title, function, employment type, compensation, on-site/hybrid/remote/flexible arrangement, location, timing, posting link, business outcome, must-haves, flexible qualifications, target markets, exclusions, confidentiality and free-form notes. Every field is optional; more detail is encouraged because it sharpens the initial market map. Submission does not begin candidate outreach.
+
 ## Canonical content order
 
 1. Personalized greeting.
@@ -29,7 +48,7 @@ The word `ring` is prohibited. The proof map uses direct-market, adjacent-market
 6. Differentiation and role-specific observation.
 7. Process boundary.
 8. Dark-blue cursive signature.
-9. Low-friction CTA.
+9. Personalized role-intake CTA.
 
 ## Delivery contract
 
@@ -43,6 +62,7 @@ The word `ring` is prohibited. The proof map uses direct-market, adjacent-market
 - no background images;
 - no web fonts or external stylesheets;
 - no JavaScript, flexbox, CSS grid, absolute positioning, transforms or media queries;
+- one scoped progressive hover rule is permitted for the CTA anchor;
 - HTML below 50 KB;
 - external messages remain drafts until Henry separately authorizes release.
 
@@ -61,6 +81,9 @@ A PDF cannot be reliably superimposed as live email content. Standard clients ge
 - proof map contains exactly four cards;
 - the word `ring` is absent;
 - no forbidden asset or CSS token;
+- personalized portal URL present;
+- CTA works without hover;
+- progressive hover is isolated to the CTA anchor;
 - HTML below 50 KB;
 - Gmail and Outlook mobile tests show one complete body;
 - recipient route verified;
