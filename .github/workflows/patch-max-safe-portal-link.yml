@@ -1,0 +1,104 @@
+name: Patch Max Safe CTA to role-intake portal
+
+on:
+  push:
+    branches:
+      - feature/pure-html-v8
+    paths:
+      - .github/workflows/patch-max-safe-portal-link.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/pure-html-v8
+          fetch-depth: 0
+
+      - name: Patch CTA, prefill and progressive hover
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('cloud/email/pure-html-v8/Code.gs')
+          text = path.read_text(encoding='utf-8')
+
+          text = text.replace(
+              "  testRecipients: Object.freeze(['hankfrisco972@gmail.com', 'henryand83@live.com']),\n  maximumHtmlBytes: 50000",
+              "  testRecipients: Object.freeze(['hankfrisco972@gmail.com', 'henryand83@live.com']),\n  portalUrl: 'https://tanzeranderson.com/role-intake/',\n  maximumHtmlBytes: 50000"
+          )
+          text = text.replace(
+              "function buildMaxSafeHtmlV9_(p) {\n  const c = colorsV9_();",
+              "function buildMaxSafeHtmlV9_(p) {\n  const c = colorsV9_();\n  const intakeUrl = buildRoleIntakeUrlV9_(p);"
+          )
+          text = text.replace(
+              "  return '<!doctype html><html><body style=\"margin:0;padding:0;background:' + c.outer + ';\">' +",
+              "  return '<!doctype html><html><head><style>.ta-role-cta:hover{position:relative!important;top:-2px!important;box-shadow:0 7px 0 #8f672f,0 12px 22px rgba(7,26,49,.18)!important}</style></head><body style=\"margin:0;padding:0;background:' + c.outer + ';\">' +"
+          )
+
+          old_cta = """          '<tr><td style=\"padding:18px 22px 14px;background:' + c.navy + ';\">' +
+            '<table role=\"presentation\" width=\"100%\" cellspacing=\"0\" cellpadding=\"0\" border=\"0\" style=\"width:100%;border-collapse:collapse;background:' + c.gold + ';\"><tr><td align=\"center\" style=\"padding:14px 10px;font-family:Georgia,Times New Roman,serif;font-size:18px;line-height:24px;color:' + c.navy + ';\">' + escapeV9_(p.cta) + ' &nbsp; →</td></tr></table>' +
+            '<div style=\"padding-top:12px;text-align:center;font-family:Arial,Helvetica,sans-serif;font-size:9px;line-height:14px;letter-spacing:3px;color:' + c.gold + ';font-weight:bold;\">INSIGHT. STRATEGY. IMPACT.</div>' +
+          '</td></tr>' +"""
+          new_cta = """          '<tr><td style=\"padding:18px 22px 14px;background:' + c.navy + ';\">' +
+            '<table role=\"presentation\" width=\"100%\" cellspacing=\"0\" cellpadding=\"0\" border=\"0\" style=\"width:100%;border-collapse:collapse;\"><tr><td align=\"center\" style=\"padding:0;\">' +
+              '<a class=\"ta-role-cta\" href=\"' + escapeV9_(intakeUrl) + '\" target=\"_blank\" rel=\"noopener\" style=\"display:block;padding:14px 10px;background:' + c.gold + ';border:1px solid #D7B36D;box-shadow:0 4px 0 #8F672F;font-family:Georgia,Times New Roman,serif;font-size:18px;line-height:24px;color:' + c.navy + ';text-decoration:none;\">' + escapeV9_(p.cta) + ' &nbsp; →</a>' +
+            '</td></tr></table>' +
+            '<div style=\"padding-top:12px;text-align:center;font-family:Arial,Helvetica,sans-serif;font-size:9px;line-height:14px;letter-spacing:3px;color:' + c.gold + ';font-weight:bold;\">INSIGHT. STRATEGY. IMPACT.</div>' +
+          '</td></tr>' +"""
+          if old_cta not in text:
+              raise SystemExit('Expected Max Safe CTA block was not found')
+          text = text.replace(old_cta, new_cta)
+
+          text = text.replace(
+              "    company: String(payload.company || '').trim(),",
+              "    company: String(payload.company || '').trim(),\n    reference: String(payload.reference || '').trim() || Utilities.getUuid().slice(0, 8).toUpperCase(),"
+          )
+          text = text.replace(
+              "    '<img', 'background-image', 'url(', 'cid:', 'data:image', '<style',\n    '@media', '<script', 'display:flex', 'display:grid', 'position:absolute',",
+              "    '<img', 'background-image', 'url(', 'cid:', 'data:image',\n    '@media', '<script', 'display:flex', 'display:grid', 'position:absolute',"
+          )
+
+          helper = """
+function buildRoleIntakeUrlV9_(p) {
+  const params = [
+    ['contact', p.firstName],
+    ['company', p.company],
+    ['role', p.role],
+    ['ref', p.reference],
+    ['source', 'first-touch-email']
+  ].filter(function(pair) { return String(pair[1] || '').trim(); })
+    .map(function(pair) { return encodeURIComponent(pair[0]) + '=' + encodeURIComponent(pair[1]); })
+    .join('&');
+  return TA_MAX_SAFE_V9.portalUrl + (params ? '?' + params : '');
+}
+
+"""
+          marker = 'function validateMaxSafeV9_(html) {'
+          if 'function buildRoleIntakeUrlV9_' not in text:
+              text = text.replace(marker, helper + marker)
+
+          path.write_text(text, encoding='utf-8')
+          PY
+          cp cloud/email/pure-html-v8/Code.gs /tmp/max-safe-v9.js
+          node --check /tmp/max-safe-v9.js
+          grep -q "portalUrl: 'https://tanzeranderson.com/role-intake/'" cloud/email/pure-html-v8/Code.gs
+          grep -q 'class=\"ta-role-cta\"' cloud/email/pure-html-v8/Code.gs
+          grep -q 'function buildRoleIntakeUrlV9_' cloud/email/pure-html-v8/Code.gs
+
+      - name: Commit portal integration to feature branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add cloud/email/pure-html-v8/Code.gs
+          git commit -m 'Link Max Safe CTA to personalized role-intake portal'
+          git push origin HEAD:feature/pure-html-v8
