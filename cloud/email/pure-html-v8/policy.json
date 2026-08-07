@@ -1,5 +1,5 @@
 {
-  "policy_id": "TA_PURE_HTML_V8",
+  "policy_id": "TA_MAX_SAFE_V9",
   "status": "staged_for_internal_visual_qa",
   "effective_date": "2026-08-06",
   "scope": "all_first_touch_email_generated_for_henry",
@@ -9,17 +9,14 @@
     "reply_to_address": "director@tanzeranderson.com",
     "title": "Managing Director - Strategy and Business Development"
   },
-  "modes": {
-    "baseline_safe": {
-      "inner_width_px": 620,
-      "layout": "single_column_table",
-      "default": true
-    },
-    "maximum_safe_html": {
-      "inner_width_px": 680,
-      "layout": "two_column_table_with_pure_html_architectural_panel",
-      "default": false
-    }
+  "layout": {
+    "inner_width_px": 640,
+    "max_width_percent": 100,
+    "architecture": "single_column_table_with_horizontal_pure_html_architectural_band",
+    "proof_cards": 4,
+    "funnel_stages": 5,
+    "side_panel": false,
+    "canonical": true
   },
   "required_content": {
     "personalized_greeting": true,
@@ -31,6 +28,9 @@
     "signature_color": "#0B2A4A",
     "signature_presentation": "thin_right_slanted_cursive_fallback_stack"
   },
+  "prohibited_copy": [
+    "ring"
+  ],
   "forbidden": [
     "attachments",
     "img_elements",
@@ -44,7 +44,8 @@
     "flexbox",
     "css_grid",
     "absolute_positioning",
-    "css_transforms"
+    "css_transforms",
+    "media_queries"
   ],
   "delivery": {
     "mime": "multipart/alternative",
@@ -54,6 +55,16 @@
     "ordinary_attachments": false,
     "inline_image_mime_parts": false,
     "maximum_html_bytes": 50000
+  },
+  "retired_email_modes": [
+    "TA_PRIVATE_MONOGRAPH_V2_3",
+    "TA_PRIVATE_MONOGRAPH_HYBRID_V5",
+    "TA_PRIVATE_MONOGRAPH_CANVAS_V4",
+    "TA_EXACT_BODY_V7"
+  ],
+  "pdf_reuse": {
+    "private_monograph_visual_system_reserved_for_pdf": true,
+    "use_after_trust_is_established": true
   },
   "controls": {
     "external_send_requires_henry_release": true,
