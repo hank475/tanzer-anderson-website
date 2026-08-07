@@ -1,4 +1,4 @@
-name: Validate Max Safe V9
+name: Validate Max Safe Portal
 
 on:
   pull_request:
@@ -27,32 +27,37 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Validate syntax and generate canonical Max Safe V9
+      - name: Validate syntax and generate canonical Max Safe portal email
         shell: bash
         run: |
           set -euo pipefail
-          cp cloud/email/pure-html-v8/Code.gs /tmp/max-safe-v9.js
-          node --check /tmp/max-safe-v9.js
+          cat cloud/email/pure-html-v8/Code.gs cloud/email/pure-html-v8/PortalIntegration.gs > /tmp/max-safe-portal.js
+          node --check /tmp/max-safe-portal.js
           node cloud/email/pure-html-v8/validate-v8.js
 
-      - name: Confirm MIME-safe HTML contract
+      - name: Confirm MIME-safe portal contract
         shell: bash
         run: |
           set -euo pipefail
           python -m json.tool cloud/email/pure-html-v8/policy.json >/dev/null
-          file=cloud/email/pure-html-v8/artifacts/max-safe-v9.html
+          file=cloud/email/pure-html-v8/artifacts/max-safe-portal.html
           test -s "$file"
           test "$(stat -c%s "$file")" -lt 50000
-          ! grep -Eqi '<img|background-image|url\(|cid:|data:image|<style|@media|<script|display:flex|display:grid|position:absolute|position:fixed|transform:' "$file"
+          ! grep -Eqi '<img|background-image|url\(|cid:|data:image|@media|<script|display:flex|display:grid|position:absolute|position:fixed|transform:' "$file"
           ! grep -Eqi '\bring\b' "$file"
           grep -q 'Dear Henry,' "$file"
           grep -q 'PROOF OF CONCEPT' "$file"
           grep -q 'director@tanzeranderson.com' "$file"
+          grep -q 'https://tanzeranderson.com/role-intake/' "$file"
+          grep -q 'class="ta-role-cta"' "$file"
+          grep -q '.ta-role-cta:hover' "$file"
+          grep -q '"role_intake_link": true' cloud/email/pure-html-v8/artifacts/receipt.json
+          grep -q '"progressive_hover": true' cloud/email/pure-html-v8/artifacts/receipt.json
           grep -q '"qa_pass": true' cloud/email/pure-html-v8/artifacts/receipt.json
-          echo 'Max Safe V9 QA: PASS'
+          echo 'Max Safe Portal QA: PASS'
 
       - uses: actions/upload-artifact@v4
         with:
-          name: max-safe-v9-sample
+          name: max-safe-portal-sample
           path: cloud/email/pure-html-v8/artifacts
           if-no-files-found: error
