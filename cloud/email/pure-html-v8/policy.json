@@ -1,0 +1,98 @@
+{
+  "policy_id": "TA_MAX_SAFE_V10_PORTAL",
+  "status": "staged_for_internal_visual_qa",
+  "effective_date": "2026-08-06",
+  "scope": "all_first_touch_email_generated_for_henry",
+  "identity": {
+    "display_name": "Henry Anderson",
+    "sender_address": "director@tanzeranderson.com",
+    "reply_to_address": "director@tanzeranderson.com",
+    "title": "Managing Director - Strategy and Business Development"
+  },
+  "layout": {
+    "inner_width_px": 640,
+    "max_width_percent": 100,
+    "architecture": "single_column_table_with_horizontal_pure_html_architectural_band",
+    "proof_cards": 4,
+    "funnel_stages": 5,
+    "side_panel": false,
+    "canonical": true
+  },
+  "required_content": {
+    "personalized_greeting": true,
+    "opening_prefix": "Rather than send a general agency pitch I’d suggest",
+    "proof_map": true,
+    "role_section_after_proof_map": true,
+    "process_boundary": true,
+    "low_friction_next_step": true,
+    "signature_color": "#0B2A4A",
+    "signature_presentation": "thin_right_slanted_cursive_fallback_stack"
+  },
+  "portal_cta": {
+    "label": "REPLY WITH ONE ROLE",
+    "url": "https://tanzeranderson.com/role-intake/",
+    "personalized_query_prefill": [
+      "contact",
+      "company",
+      "email",
+      "role",
+      "ref",
+      "source"
+    ],
+    "base_link_required": true,
+    "progressive_hover_lift_px": 2,
+    "hover_support_is_best_effort": true,
+    "link_must_work_without_hover": true
+  },
+  "prohibited_copy": [
+    "ring"
+  ],
+  "forbidden": [
+    "attachments",
+    "img_elements",
+    "cid_images",
+    "data_uri_images",
+    "remote_images",
+    "background_images",
+    "web_fonts",
+    "external_stylesheets",
+    "javascript",
+    "flexbox",
+    "css_grid",
+    "absolute_positioning",
+    "css_transforms",
+    "media_queries"
+  ],
+  "allowed_progressive_css": [
+    "scoped_anchor_hover_position_relative",
+    "scoped_anchor_hover_top_negative_two_pixels",
+    "scoped_anchor_hover_box_shadow"
+  ],
+  "delivery": {
+    "mime": "multipart/alternative",
+    "plain_text_part": true,
+    "html_part": true,
+    "multipart_mixed": false,
+    "ordinary_attachments": false,
+    "inline_image_mime_parts": false,
+    "maximum_html_bytes": 50000
+  },
+  "retired_email_modes": [
+    "TA_PRIVATE_MONOGRAPH_V2_3",
+    "TA_PRIVATE_MONOGRAPH_HYBRID_V5",
+    "TA_PRIVATE_MONOGRAPH_CANVAS_V4",
+    "TA_EXACT_BODY_V7"
+  ],
+  "pdf_reuse": {
+    "private_monograph_visual_system_reserved_for_pdf": true,
+    "use_after_trust_is_established": true
+  },
+  "controls": {
+    "external_send_requires_henry_release": true,
+    "automatic_external_send": false,
+    "recipient_route_must_be_verified": true,
+    "candidate_outreach_triggered_by_portal": false,
+    "gmail_mobile_test_required": true,
+    "outlook_mobile_test_required": true
+  }
+}
