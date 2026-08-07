@@ -1,0 +1,41 @@
+name: QA Tanzer Anderson Email Standard
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - email-standard/**
+      - .github/workflows/**
+      - communications-suite/**
+  push:
+    branches: [main]
+    paths:
+      - email-standard/**
+      - .github/workflows/**
+      - communications-suite/**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-email-standard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate canonical HTML correspondence standard
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s email-standard/template.html
+          test -s email-standard/README.md
+          grep -q 'TA_TEXTURED_HTML_EMAIL_STANDARD_V1' email-standard/template.html
+          grep -q 'director@tanzeranderson.com' email-standard/template.html
+          grep -q 'Managing Director - Strategy and Business Development' email-standard/template.html
+          grep -q 'Hello {{FIRST_NAME}},' email-standard/template.html
+          grep -q "Brush Script MT" email-standard/template.html
+          if grep -R --line-number -E 'inlineImages|cid:' .github/workflows email-standard communications-suite 2>/dev/null; then
+            echo 'Deprecated image-embedding email mechanism found in an active workflow or email source.' >&2
+            exit 1
+          fi
+          echo 'Tanzer Anderson textured HTML email standard: PASS'
