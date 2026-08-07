@@ -1,0 +1,55 @@
+{
+  "schema_id": "TA_PRIVATE_ROLE_INTAKE_V1",
+  "status": "production_candidate",
+  "route": "https://tanzeranderson.com/role-intake/",
+  "submission_endpoint": "/api/contact",
+  "source": "role-intake-portal",
+  "all_fields_optional": true,
+  "recommended_fields": [
+    "company",
+    "email",
+    "roleTitle",
+    "salary",
+    "workArrangement",
+    "mustHave"
+  ],
+  "fields": [
+    "name",
+    "company",
+    "email",
+    "roleTitle",
+    "function",
+    "employmentType",
+    "salary",
+    "workArrangement",
+    "location",
+    "deadline",
+    "posting",
+    "outcome",
+    "mustHave",
+    "preferred",
+    "targets",
+    "exclusions",
+    "confidentiality",
+    "notes"
+  ],
+  "query_prefill": [
+    "contact",
+    "company",
+    "email",
+    "role",
+    "salary",
+    "work",
+    "location",
+    "ref",
+    "source"
+  ],
+  "controls": {
+    "candidate_outreach_triggered": false,
+    "placement_obligation_created": false,
+    "payment_data_requested": false,
+    "local_autosave": true,
+    "mailto_fallback": "director@tanzeranderson.com",
+    "noindex": true
+  }
+}
