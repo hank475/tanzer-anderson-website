@@ -32,9 +32,10 @@ The system then:
 4. Preserves recipients, subjects, CC/BCC, original threads, and ordinary attachments.
 5. Omits the external scheduling CTA on internal/control drafts.
 6. Treats no-recipient recipient-facing drafts as external unless their subject/body carries an internal-control cue.
-7. Skips drafts already carrying the canonical `TA_PRIVATE_MONOGRAPH_V2` marker, preventing nested re-wrapping.
-8. Creates a one-minute watcher for newly saved drafts.
-9. Creates a migration log and rollback pathway.
+7. Repairs earlier Private Monograph drafts that still carry a superseded title.
+8. Skips only drafts that already carry both the canonical `TA_PRIVATE_MONOGRAPH_V2` marker and the exact v2.3 title, preventing nested re-wrapping.
+9. Creates a one-minute watcher for newly saved drafts.
+10. Creates a migration log and rollback pathway.
 
 ## Validation completed
 
@@ -44,7 +45,7 @@ The system then:
 - All superseded title variants are absent from human-readable package documents.
 - No send method is present in the migration source.
 - Signature bytes match the packaged approved signature asset.
-- No-recipient and already-wrapped draft handling passed static checks.
+- No-recipient classification, superseded-title repair, and current-v2.3 skip behavior passed static checks.
 - Corrected preview was generated from the master HTML.
 - ZIP integrity passed.
 
