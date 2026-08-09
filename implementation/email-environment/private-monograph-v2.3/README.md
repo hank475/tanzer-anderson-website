@@ -34,8 +34,14 @@ The system then:
 6. Treats no-recipient recipient-facing drafts as external unless their subject/body carries an internal-control cue.
 7. Repairs earlier Private Monograph drafts that still carry a superseded title.
 8. Skips only drafts that already carry both the canonical `TA_PRIVATE_MONOGRAPH_V2` marker and the exact v2.3 title, preventing nested re-wrapping.
-9. Creates a one-minute watcher for newly saved drafts.
-10. Creates a migration log and rollback pathway.
+9. Retries failed migrations up to three times and exposes any permanent failures.
+10. Creates a one-minute watcher for newly saved drafts.
+11. Creates a migration log and rollback pathway.
+12. Reports current, superseded, unwrapped, failed, and production-ready states through `systemStatus()`.
+
+## Future-email operating rule
+
+Gmail does not provide a native Apps Script event for draft creation. The watcher polls once per minute. To guarantee the approved shell on future correspondence, every outbound message must be saved as a draft and allowed one watcher interval before release. The message may be sent only after the full shell and exact corrected title are visible. Automated pathways remain draft-only until wrapping completes.
 
 ## Validation completed
 
@@ -45,10 +51,10 @@ The system then:
 - All superseded title variants are absent from human-readable package documents.
 - No send method is present in the migration source.
 - Signature bytes match the packaged approved signature asset.
-- No-recipient classification, superseded-title repair, and current-v2.3 skip behavior passed static checks.
+- No-recipient classification, superseded-title repair, current-v2.3 skip behavior, retry handling, and status reporting passed static checks.
 - Corrected preview was generated from the master HTML.
 - ZIP integrity passed.
 
 ## Production gate
 
-Do not merge this record as a production-status claim until `systemStatus()` reports a zero migration queue, representative internal/external drafts pass desktop and mobile review, the future-draft watcher is verified, and rollback is tested on a disposable draft.
+Do not merge this record as a production-status claim until `systemStatus()` reports `readyForProduction: true`, a zero migration queue, no permanent failures, zero superseded or unwrapped drafts, representative internal/external drafts pass desktop and mobile review, the future-draft watcher is verified, and rollback is tested on a disposable draft.
