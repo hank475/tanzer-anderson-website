@@ -11,11 +11,11 @@ The design removes the prior “Clarity. Alignment. Enduring Value.” headline,
 
 ## Activation package
 
-The complete Apps Script package is stored in the authorized Tanzer Anderson Google Drive:
+The complete Apps Script package is stored in the authorized Tanzer Anderson Google Drive as fresh v2.3 uploads, without superseded package revision history:
 
 - Package: `Tanzer_Anderson_Private_Monograph_Email_Automation_v2.3.zip`
-- Drive file ID: `1iPS8tvEVi93xsn-H9vtYSYI1uHKHIcq3`
-- SHA-256 record file ID: `1R59JJXgMN99ZiRLpuL0l7WFDu9gGQKon`
+- Drive file ID: `1o6_CZJ-pc_aSg7x7EDBGzaQipRJQSUjo`
+- SHA-256 record file ID: `1Buh8gNirb1WZrZUFI6MhiGdkNcfV0ZeS`
 - Start Here Google Doc ID: `1nnkCpN6mrQl2lVCbfqLmFNniDf1YLupDCVDxzjm6u1E`
 
 ## Authorized production activation
