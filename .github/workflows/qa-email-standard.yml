@@ -23,19 +23,49 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate canonical HTML correspondence standard
+      - name: Validate canonical paper-wrap correspondence standard
         shell: bash
         run: |
           set -euo pipefail
           test -s email-standard/template.html
           test -s email-standard/README.md
-          grep -q 'TA_TEXTURED_HTML_EMAIL_STANDARD_V1' email-standard/template.html
-          grep -q 'director@tanzeranderson.com' email-standard/template.html
-          grep -q 'Managing Director - Strategy and Business Development' email-standard/template.html
-          grep -q 'Hello {{FIRST_NAME}},' email-standard/template.html
-          grep -q "Brush Script MT" email-standard/template.html
+          grep -Fq 'TA_PAPER_WRAP_EMAIL_STANDARD_V1' email-standard/template.html
+          grep -Fq 'director@tanzeranderson.com' email-standard/template.html
+          grep -Fq 'Managing Director – Strategy and Business Development' email-standard/template.html
+          grep -Fq 'Hello {{FIRST_NAME}},' email-standard/template.html
+          grep -Fq "Brush Script MT" email-standard/template.html
+          grep -Fq 'linear-gradient(135deg' email-standard/template.html
+          grep -Fq 'TANZER ANDERSON' email-standard/template.html
+          grep -Fq 'P.O. Box 195265, Dallas, TX 75219' email-standard/template.html
+
+          if grep -Fq 'TA_TEXTURED_HTML_EMAIL_STANDARD_V1' email-standard/template.html; then
+            echo 'Retired textured email marker found.' >&2
+            exit 1
+          fi
+
+          if grep -Fq 'tanzer-background-01.jpg' email-standard/template.html; then
+            echo 'Rejected remote background reference found.' >&2
+            exit 1
+          fi
+
+          if grep -Fq 'raw.githubusercontent.com' email-standard/template.html; then
+            echo 'Remote image dependency found in canonical template.' >&2
+            exit 1
+          fi
+
+          if grep -Fq 'Private & Confidential' email-standard/template.html || grep -Fq 'Private Correspondence' email-standard/template.html; then
+            echo 'Retired confidentiality language found.' >&2
+            exit 1
+          fi
+
+          if compgen -G 'email-standard/assets/tanzer-background-01.jpg*' > /dev/null; then
+            echo 'Rejected background asset or regeneration source still exists.' >&2
+            exit 1
+          fi
+
           if grep -R --line-number -E 'inlineImages|cid:' .github/workflows email-standard communications-suite 2>/dev/null; then
             echo 'Deprecated image-embedding email mechanism found in an active workflow or email source.' >&2
             exit 1
           fi
-          echo 'Tanzer Anderson textured HTML email standard: PASS'
+
+          echo 'Tanzer Anderson paper-wrap HTML email standard: PASS'
