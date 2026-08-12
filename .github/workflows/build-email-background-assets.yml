@@ -31,12 +31,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if git diff --quiet -- email-standard/assets/tanzer-background-01.jpg; then
-            echo "Generated asset is already current."
-            exit 0
-          fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add email-standard/assets/tanzer-background-01.jpg
+          if git diff --cached --quiet; then
+            echo "Generated asset is already current."
+            exit 0
+          fi
           git commit -m "Build email background binary asset"
           git push
