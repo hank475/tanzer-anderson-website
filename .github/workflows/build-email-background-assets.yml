@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'email-standard/assets/tanzer-background-01.jpg.b64part*'
+      - 'email-standard/assets/tanzer-background-01.jpg.b64'
       - '.github/workflows/build-email-background-assets.yml'
   workflow_dispatch:
 
@@ -18,12 +18,12 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Assemble and decode premium Gmail background
+      - name: Decode Gmail background asset
         shell: bash
         run: |
           set -euo pipefail
-          cat email-standard/assets/tanzer-background-01.jpg.b64part* \
-            | base64 --decode \
+          base64 --decode \
+            email-standard/assets/tanzer-background-01.jpg.b64 \
             > email-standard/assets/tanzer-background-01.jpg
           file email-standard/assets/tanzer-background-01.jpg
 
@@ -38,5 +38,5 @@ jobs:
             echo "Generated asset is already current."
             exit 0
           fi
-          git commit -m "Build premium Gmail background asset"
+          git commit -m "Build Gmail background binary asset"
           git push
