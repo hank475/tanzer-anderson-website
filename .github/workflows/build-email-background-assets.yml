@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'email-standard/assets/*.b64'
+      - '.github/workflows/build-email-background-assets.yml'
   workflow_dispatch:
 
 permissions:
