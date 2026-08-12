@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'email-standard/assets/*.b64'
+      - 'email-standard/assets/*.b64part*'
       - '.github/workflows/build-email-background-assets.yml'
   workflow_dispatch:
 
@@ -23,14 +23,14 @@ jobs:
         run: |
           set -euo pipefail
           shopt -s nullglob
-          files=(email-standard/assets/*.b64)
-          if [ ${#files[@]} -eq 0 ]; then
-            echo "No encoded assets found."
+          first_parts=(email-standard/assets/*.b64part00)
+          if [ ${#first_parts[@]} -eq 0 ]; then
+            echo "No encoded asset parts found."
             exit 0
           fi
-          for source in "${files[@]}"; do
-            target="${source%.b64}"
-            base64 --decode "$source" > "$target"
+          for first in "${first_parts[@]}"; do
+            target="${first%.b64part00}"
+            cat "${target}".b64part* | base64 --decode > "$target"
             echo "Built $target"
           done
 
