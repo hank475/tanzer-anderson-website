@@ -1,0 +1,81 @@
+name: Validate RaaS Commercial Model
+
+on:
+  pull_request:
+    paths:
+      - 'tanzer-anderson-cloudflare-site-v2/raas/**'
+      - 'tanzer-anderson-cloudflare-site-v2/executive-search/**'
+      - 'tanzer-anderson-cloudflare-site-v2/_worker.js'
+      - 'tanzer-anderson-cloudflare-site-v2/assets/raas-integration.css'
+      - 'tanzer-anderson-cloudflare-site-v2/sitemap.xml'
+      - '.github/workflows/validate-raas-commercial.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: JavaScript syntax
+        run: |
+          node --check tanzer-anderson-cloudflare-site-v2/_worker.js
+          node --check tanzer-anderson-cloudflare-site-v2/raas/assets/raas.js
+          node --check tanzer-anderson-cloudflare-site-v2/raas/config.js
+
+      - name: Parse HTML and structured data
+        run: |
+          python - <<'PY'
+          from html.parser import HTMLParser
+          from pathlib import Path
+          import json, re
+
+          class Parser(HTMLParser):
+              pass
+
+          files = [
+              Path('tanzer-anderson-cloudflare-site-v2/raas/index.html'),
+              Path('tanzer-anderson-cloudflare-site-v2/raas/intake/index.html'),
+              Path('tanzer-anderson-cloudflare-site-v2/executive-search/index.html'),
+          ]
+          for path in files:
+              text = path.read_text(encoding='utf-8')
+              parser = Parser()
+              parser.feed(text)
+              for match in re.finditer(r'<script type="application/ld\+json">(.*?)</script>', text, re.S):
+                  json.loads(match.group(1))
+          print(f'Parsed {len(files)} HTML files')
+          PY
+
+      - name: Verify approved pricing and fulfillment
+        run: |
+          grep -Fq '$1,250' tanzer-anderson-cloudflare-site-v2/raas/index.html
+          grep -Fq '$2,000–$2,500' tanzer-anderson-cloudflare-site-v2/raas/index.html
+          grep -Fq '$5,500' tanzer-anderson-cloudflare-site-v2/raas/index.html
+          grep -Fq '$9,500' tanzer-anderson-cloudflare-site-v2/raas/index.html
+          grep -Fq 'three distinct Tanzer Anderson candidates for interview' tanzer-anderson-cloudflare-site-v2/raas/index.html
+          grep -Fq 'one Tanzer Anderson candidate for offer' tanzer-anderson-cloudflare-site-v2/raas/index.html
+          grep -Fq 'Payment alone does not start work' tanzer-anderson-cloudflare-site-v2/raas/index.html
+          grep -Fq 'checkoutEnabled:false' tanzer-anderson-cloudflare-site-v2/raas/config.js
+
+      - name: Reject stale commercial model
+        run: |
+          ! grep -R -E '\$499|\$999/month|\$1,999/month|Search One|Search Three|Search Eight' \
+            tanzer-anderson-cloudflare-site-v2/raas \
+            tanzer-anderson-cloudflare-site-v2/executive-search
+
+      - name: Verify role boundary and SEO routes
+        run: |
+          grep -Fq '/executive-search/' tanzer-anderson-cloudflare-site-v2/raas/assets/raas.js
+          grep -Fq 'https://www.tanzeranderson.com/raas/' tanzer-anderson-cloudflare-site-v2/sitemap.xml
+          grep -Fq 'https://www.tanzeranderson.com/executive-search/' tanzer-anderson-cloudflare-site-v2/sitemap.xml
+          grep -Fq '<link rel="canonical" href="https://www.tanzeranderson.com/raas/">' tanzer-anderson-cloudflare-site-v2/raas/index.html
+
+      - name: Confirm fail-closed release boundary
+        run: |
+          grep -Fq 'checkoutEnabled:false' tanzer-anderson-cloudflare-site-v2/raas/config.js
+          grep -Fq 'Submitting this form does not start a search' tanzer-anderson-cloudflare-site-v2/raas/intake/index.html
+          grep -Fq 'does not create an engagement or authorize outreach' tanzer-anderson-cloudflare-site-v2/executive-search/index.html
