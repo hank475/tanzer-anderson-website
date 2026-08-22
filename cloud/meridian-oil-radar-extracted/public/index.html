@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#050a10">
+  <meta name="description" content="Meridian Oil Radar — live oil news and indicator intelligence terminal.">
+  <title>Meridian Oil Radar | Live Energy Intelligence</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><path fill=%22%23f0a73a%22 d=%22M50 5C37 28 20 48 20 67a30 30 0 0060 0C80 48 63 28 50 5z%22/></svg>">
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <div id="bootScreen" class="boot-screen">
+    <div class="boot-mark"><span></span></div>
+    <div class="boot-title">MERIDIAN OIL RADAR</div>
+    <div class="boot-copy">Initializing live intelligence surfaces…</div>
+    <div class="boot-line"><i></i></div>
+  </div>
+
+  <div class="app-shell" id="appShell" aria-hidden="true">
+    <header class="topbar">
+      <div class="brand-block">
+        <button class="mobile-nav-toggle" id="mobileNavToggle" aria-label="Toggle navigation">☰</button>
+        <div class="brand-symbol" aria-hidden="true">
+          <svg viewBox="0 0 64 64"><path d="M32 4C23 20 12 34 12 45a20 20 0 0 0 40 0C52 34 41 20 32 4Z"/><path d="M32 15C26 28 20 37 20 45a12 12 0 0 0 24 0c0-8-6-17-12-30Z"/></svg>
+        </div>
+        <div>
+          <div class="brand-name">MERIDIAN <strong>OIL RADAR</strong></div>
+          <div class="brand-tag">INTELLIGENCE · RISK · DECISION</div>
+        </div>
+      </div>
+      <div class="topbar-center">
+        <button class="command-trigger" id="commandTrigger"><span>⌘</span> Search or run a command <kbd>Ctrl K</kbd></button>
+      </div>
+      <div class="system-strip">
+        <div class="system-cell"><span class="live-dot" id="liveDot"></span><b id="connectionState">CONNECTING</b><small>DATA BUS</small></div>
+        <div class="system-cell"><b id="utcClock">--:--:--</b><small>UTC</small></div>
+        <button class="icon-button" id="focusToggle" title="Focus mode" aria-label="Focus mode">◫</button>
+        <button class="refresh-button" id="refreshAll"><span>↻</span> SCAN</button>
+      </div>
+    </header>
+
+    <div class="ticker-bar" id="tickerBar" aria-label="Market ticker">
+      <div class="ticker-track" id="tickerTrack"><span class="ticker-loading">Awaiting market feed…</span></div>
+      <div class="ticker-time" id="tickerAsOf">AS OF —</div>
+    </div>
+
+    <aside class="sidebar" id="sidebar">
+      <nav class="nav-list" aria-label="Primary navigation">
+        <button class="nav-item active" data-view="command"><span class="nav-index">01</span><span class="nav-icon">⌂</span><span>Command Center</span></button>
+        <button class="nav-item" data-view="radar"><span class="nav-index">02</span><span class="nav-icon">◎</span><span>Live Radar</span><em id="radarBadge">0</em></button>
+        <button class="nav-item" data-view="markets"><span class="nav-index">03</span><span class="nav-icon">⌁</span><span>Markets</span></button>
+        <button class="nav-item" data-view="fundamentals"><span class="nav-index">04</span><span class="nav-icon">▥</span><span>Fundamentals</span></button>
+        <button class="nav-item" data-view="news"><span class="nav-index">05</span><span class="nav-icon">≋</span><span>News Intelligence</span><em id="newsBadge">0</em></button>
+        <button class="nav-item" data-view="decision"><span class="nav-index">06</span><span class="nav-icon">◇</span><span>Decision Lab</span></button>
+        <button class="nav-item" data-view="predictions"><span class="nav-index">07</span><span class="nav-icon">◈</span><span>Prediction Ledger</span></button>
+        <button class="nav-item" data-view="alerts"><span class="nav-index">08</span><span class="nav-icon">△</span><span>Alerts</span><em id="alertBadge">0</em></button>
+        <button class="nav-item" data-view="settings"><span class="nav-index">09</span><span class="nav-icon">⚙</span><span>Sources & Settings</span></button>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="source-mini">
+          <div><span id="healthDot" class="status-dot"></span> SOURCE HEALTH</div>
+          <strong id="sourceHealthMini">0 / 0</strong>
+        </div>
+        <div class="scan-mini">
+          <span>LAST FULL SCAN</span>
+          <strong id="lastScanMini">—</strong>
+        </div>
+        <div class="terminal-version">MERIDIAN / OIL / v1.0</div>
+      </div>
+    </aside>
+
+    <main class="workspace" id="workspace">
+      <div class="global-banner hidden" id="demoBanner">
+        <strong>DEMO MODE</strong> — Explicit synthetic records are active for interface testing. They are not live market data.
+      </div>
+      <div class="global-banner warning hidden" id="dataWarning"></div>
+
+      <section class="view active" id="view-command" data-title="Command Center">
+        <div class="view-head">
+          <div>
+            <div class="eyebrow">GLOBAL PETROLEUM INTELLIGENCE</div>
+            <h1>Command Center</h1>
+            <p>Live evidence, market pressure, supply risk, and high-impact developments in one operating surface.</p>
+          </div>
+          <div class="view-actions">
+            <button class="ghost-button" data-action="export-snapshot">EXPORT SNAPSHOT</button>
+            <button class="gold-button" data-view-jump="radar">OPEN FULL RADAR</button>
+          </div>
+        </div>
+
+        <div class="kpi-strip" id="kpiStrip">
+          <article class="kpi-card hero-kpi">
+            <span>OIL PRESSURE INDEX</span>
+            <strong id="pressureScore">—</strong>
+            <div class="kpi-meter"><i id="pressureMeter"></i></div>
+            <small id="pressureLabel">Awaiting inputs</small>
+          </article>
+          <article class="kpi-card"><span>WTI SPOT</span><strong id="kpiWti">—</strong><small id="kpiWtiChange">Delayed series</small></article>
+          <article class="kpi-card"><span>BRENT SPOT</span><strong id="kpiBrent">—</strong><small id="kpiBrentChange">Delayed series</small></article>
+          <article class="kpi-card"><span>OVX VOLATILITY</span><strong id="kpiOvx">—</strong><small id="kpiOvxState">Risk regime</small></article>
+          <article class="kpi-card"><span>HIGH-IMPACT EVENTS</span><strong id="kpiEvents">—</strong><small>Impact score ≥ 70</small></article>
+          <article class="kpi-card"><span>LIVE COVERAGE</span><strong id="kpiCoverage">—</strong><small id="kpiCoverageText">Pressure inputs</small></article>
+        </div>
+
+        <div class="command-grid">
+          <article class="panel radar-panel">
+            <div class="panel-head">
+              <div><span class="panel-kicker">LIVE GEOSPATIAL SCAN</span><h2>Oil Intelligence Radar</h2></div>
+              <div class="scan-state"><span class="pulse"></span><b id="radarScanState">SCANNING</b><small id="radarScanCount">0 nodes</small></div>
+            </div>
+            <div class="radar-wrap compact" id="commandRadarWrap">
+              <svg class="radar-svg" id="commandRadar" viewBox="0 0 800 520" role="img" aria-label="Oil intelligence radar">
+                <defs>
+                  <radialGradient id="radarBg" cx="50%" cy="50%"><stop offset="0%" stop-color="#111b22"/><stop offset="76%" stop-color="#071016"/><stop offset="100%" stop-color="#03080c"/></radialGradient>
+                  <linearGradient id="scanGradient" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#f0a73a" stop-opacity="0"/><stop offset="85%" stop-color="#f0a73a" stop-opacity=".12"/><stop offset="100%" stop-color="#ffd67c" stop-opacity=".7"/></linearGradient>
+                  <filter id="glow"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+                </defs>
+                <rect x="0" y="0" width="800" height="520" rx="16" fill="url(#radarBg)"/>
+                <g class="radar-grid" transform="translate(400 260)">
+                  <ellipse rx="330" ry="208"/><ellipse rx="264" ry="166"/><ellipse rx="198" ry="124"/><ellipse rx="132" ry="83"/><ellipse rx="66" ry="41"/>
+                  <path d="M-330 0H330M0-208V208M-286-104L286 104M-286 104L286-104"/>
+                  <ellipse rx="110" ry="208"/><ellipse rx="220" ry="208"/><ellipse rx="330" ry="70"/><ellipse rx="330" ry="140"/>
+                </g>
+                <g class="world-lines" id="commandWorldLines"></g>
+                <g class="radar-sweep" transform="translate(400 260)"><path d="M0 0 L330 -16 A330 208 0 0 1 275 115 Z" fill="url(#scanGradient)"/></g>
+                <g id="commandRadarNodes"></g>
+                <g class="radar-hub" transform="translate(400 260)"><circle r="33"/><circle r="23"/><path d="M0-16C-7-3-14 6-14 14a14 14 0 0028 0C14 6 7-3 0-16Z"/></g>
+                <text x="34" y="486" class="radar-caption">RING: URGENCY · NODE: IMPACT · COLOR: DIRECTION</text>
+                <text x="766" y="486" text-anchor="end" class="radar-caption" id="radarUtcLabel">UTC —</text>
+              </svg>
+              <div class="radar-legend"><span><i class="bull"></i>UPWARD PRESSURE</span><span><i class="bear"></i>DOWNWARD PRESSURE</span><span><i class="mixed"></i>MIXED</span></div>
+            </div>
+          </article>
+
+          <article class="panel briefing-panel">
+            <div class="panel-head">
+              <div><span class="panel-kicker">EXECUTIVE SYNTHESIS</span><h2>Current Read</h2></div>
+              <span class="as-of-pill" id="briefAsOf">AS OF —</span>
+            </div>
+            <div class="regime-card">
+              <div class="regime-ring"><span id="regimeValue">—</span></div>
+              <div><small>MARKET REGIME</small><h3 id="regimeLabel">Insufficient inputs</h3><p id="regimeNarrative">The terminal is assembling source-backed signals.</p></div>
+            </div>
+            <div class="brief-list" id="briefList"><div class="empty-line">Waiting for live evidence…</div></div>
+            <div class="brief-actions"><button class="ghost-button small" data-view-jump="decision">MODEL SCENARIO</button><button class="ghost-button small" data-view-jump="alerts">CREATE ALERT</button></div>
+          </article>
+        </div>
+
+        <div class="two-column-grid lower-grid">
+          <article class="panel">
+            <div class="panel-head"><div><span class="panel-kicker">MARKET MOVEMENT</span><h2>WTI / Brent Context</h2></div><select id="commandChartRange" class="terminal-select"><option value="30">30D</option><option value="90" selected>90D</option><option value="180">180D</option><option value="365">1Y</option></select></div>
+            <div class="chart-wrap"><canvas id="commandMarketChart" height="260"></canvas><div class="chart-empty hidden" id="commandMarketEmpty">Market series unavailable</div></div>
+            <div class="chart-legend"><span><i></i>WTI</span><span><i></i>BRENT</span><span id="spreadLegend">Spread —</span></div>
+          </article>
+          <article class="panel">
+            <div class="panel-head"><div><span class="panel-kicker">RANKED BY IMPACT × CONFIDENCE × FRESHNESS</span><h2>Priority Intelligence</h2></div><button class="text-button" data-view-jump="news">VIEW ALL →</button></div>
+            <div class="priority-feed" id="priorityFeed"><div class="empty-state compact">No live stories loaded.</div></div>
+          </article>
+        </div>
+
+        <article class="panel component-panel">
+          <div class="panel-head"><div><span class="panel-kicker">TRANSPARENT COMPOSITE</span><h2>Oil Pressure Components</h2></div><button class="text-button" data-view-jump="settings">ADJUST WEIGHTS →</button></div>
+          <div class="component-grid" id="pressureComponents"><div class="empty-state compact">Awaiting market, fundamental, and news inputs.</div></div>
+        </article>
+      </section>
+
+      <section class="view" id="view-radar" data-title="Live Radar">
+        <div class="view-head">
+          <div><div class="eyebrow">GEOSPATIAL EVENT INTELLIGENCE</div><h1>Live Radar</h1><p>Every node is linked to evidence. Distance represents urgency; size represents estimated market impact.</p></div>
+          <div class="view-actions"><button class="ghost-button" id="radarFullscreen">FULLSCREEN</button><button class="gold-button" id="radarRescan">RESCAN SOURCES</button></div>
+        </div>
+        <div class="radar-filterbar">
+          <label>WINDOW<select id="radarTimeFilter"><option value="24h">24 HOURS</option><option value="3d">3 DAYS</option><option value="7d">7 DAYS</option><option value="30d">30 DAYS</option></select></label>
+          <label>IMPACT<select id="radarImpactFilter"><option value="0">ALL</option><option value="50">50+</option><option value="70">70+</option><option value="85">85+</option></select></label>
+          <label>DIRECTION<select id="radarDirectionFilter"><option value="all">ALL</option><option value="bullish">UPWARD</option><option value="bearish">DOWNWARD</option><option value="mixed">MIXED</option></select></label>
+          <label>CATEGORY<select id="radarCategoryFilter"><option value="all">ALL CATEGORIES</option></select></label>
+          <label>CONFIDENCE<select id="radarConfidenceFilter"><option value="0">ALL</option><option value="70">70+</option><option value="85">85+</option></select></label>
+          <button class="ghost-button small" id="radarClearFilters">CLEAR</button>
+        </div>
+        <div class="radar-layout">
+          <article class="panel full-radar-panel">
+            <div class="radar-wrap full" id="fullRadarWrap">
+              <svg class="radar-svg" id="fullRadar" viewBox="0 0 1000 680" role="img" aria-label="Full oil intelligence radar">
+                <defs>
+                  <radialGradient id="fullRadarBg" cx="50%" cy="50%"><stop offset="0%" stop-color="#111d25"/><stop offset="72%" stop-color="#071116"/><stop offset="100%" stop-color="#02070b"/></radialGradient>
+                  <linearGradient id="fullScanGradient" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#f0a73a" stop-opacity="0"/><stop offset="82%" stop-color="#f0a73a" stop-opacity=".12"/><stop offset="100%" stop-color="#ffe0a0" stop-opacity=".72"/></linearGradient>
+                  <filter id="fullGlow"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+                </defs>
+                <rect width="1000" height="680" rx="18" fill="url(#fullRadarBg)"/>
+                <g class="radar-grid" transform="translate(500 340)"><ellipse rx="430" ry="280"/><ellipse rx="344" ry="224"/><ellipse rx="258" ry="168"/><ellipse rx="172" ry="112"/><ellipse rx="86" ry="56"/><path d="M-430 0H430M0-280V280M-372-140L372 140M-372 140L372-140"/><ellipse rx="143" ry="280"/><ellipse rx="286" ry="280"/><ellipse rx="430" ry="94"/><ellipse rx="430" ry="188"/></g>
+                <g class="world-lines" id="fullWorldLines"></g>
+                <g class="radar-sweep" transform="translate(500 340)"><path d="M0 0 L430 -22 A430 280 0 0 1 354 160 Z" fill="url(#fullScanGradient)"/></g>
+                <g id="fullRadarNodes"></g>
+                <g class="radar-hub" transform="translate(500 340)"><circle r="43"/><circle r="31"/><path d="M0-22C-10-4-18 9-18 19a18 18 0 0036 0C18 9 10-4 0-22Z"/></g>
+                <text x="42" y="640" class="radar-caption">MERIDIAN GLOBAL PETROLEUM SCAN</text><text x="958" y="640" text-anchor="end" class="radar-caption" id="fullRadarCount">0 EVENTS</text>
+              </svg>
+              <div class="radar-legend"><span><i class="bull"></i>UPWARD PRESSURE</span><span><i class="bear"></i>DOWNWARD PRESSURE</span><span><i class="mixed"></i>MIXED</span><span class="legend-note">Click a node for evidence</span></div>
+            </div>
+          </article>
+          <aside class="panel evidence-drawer" id="radarEvidence">
+            <div class="panel-head"><div><span class="panel-kicker">EVIDENCE PANEL</span><h2>Selected Event</h2></div></div>
+            <div class="empty-state" id="radarEvidenceEmpty"><span>◎</span><h3>Select a radar node</h3><p>The source, confidence, inferred location, classification, and market rationale will appear here.</p></div>
+            <div class="evidence-content hidden" id="radarEvidenceContent"></div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="view" id="view-markets" data-title="Markets">
+        <div class="view-head"><div><div class="eyebrow">DELAY-AWARE MARKET MONITOR</div><h1>Markets</h1><p>Public delayed series with exact as-of dates. Exchange-grade real-time futures activate only with a valid provider.</p></div><div class="view-actions"><select id="marketRange" class="terminal-select"><option value="30">30D</option><option value="90">90D</option><option value="180">180D</option><option value="365" selected>1Y</option></select><button class="ghost-button" data-action="export-market">EXPORT CSV</button></div></div>
+        <div class="market-card-grid" id="marketCardGrid"></div>
+        <div class="two-column-grid">
+          <article class="panel market-chart-panel"><div class="panel-head"><div><span class="panel-kicker">SELECTED INSTRUMENT</span><h2 id="selectedMarketTitle">WTI Spot</h2></div><select id="marketInstrumentSelect" class="terminal-select"></select></div><div class="chart-wrap tall"><canvas id="marketDetailChart" height="360"></canvas><div class="chart-empty hidden" id="marketDetailEmpty">Series unavailable</div></div><div class="stat-row" id="marketStats"></div></article>
+          <article class="panel"><div class="panel-head"><div><span class="panel-kicker">CROSS-ASSET CONTEXT</span><h2>Movement Matrix</h2></div><span class="as-of-pill">NORMALIZED CHANGE</span></div><div class="matrix-table-wrap"><table class="terminal-table" id="movementMatrix"><thead><tr><th>INSTRUMENT</th><th>1 OBS</th><th>5 OBS</th><th>20 OBS</th><th>60D Z</th><th>AS OF</th></tr></thead><tbody></tbody></table></div><div class="locked-module"><span>⌁</span><div><strong>Futures term structure</strong><p>Connect a licensed futures provider to enable front spreads, curve shape, contango/backwardation, and roll analytics.</p></div><button data-view-jump="settings">CONFIGURE</button></div></article>
+        </div>
+      </section>
+
+      <section class="view" id="view-fundamentals" data-title="Fundamentals">
+        <div class="view-head"><div><div class="eyebrow">EIA SUPPLY BALANCE</div><h1>Fundamentals</h1><p>Weekly inventory and production data with trend, percentile, release date, and source state.</p></div><div class="view-actions"><button class="ghost-button" data-action="export-fundamentals">EXPORT CSV</button><button class="gold-button" id="fundamentalsRefresh">REFRESH EIA SERIES</button></div></div>
+        <div class="fundamental-grid" id="fundamentalGrid"></div>
+        <div class="two-column-grid">
+          <article class="panel"><div class="panel-head"><div><span class="panel-kicker">WEEKLY BALANCE</span><h2 id="fundamentalChartTitle">Commercial Crude Stocks</h2></div><select id="fundamentalSelect" class="terminal-select"></select></div><div class="chart-wrap tall"><canvas id="fundamentalChart" height="340"></canvas><div class="chart-empty hidden" id="fundamentalChartEmpty">Fundamental series unavailable</div></div><div class="source-footnote" id="fundamentalFootnote">Source: EIA via FRED.</div></article>
+          <article class="panel"><div class="panel-head"><div><span class="panel-kicker">RELEASE INTERPRETATION</span><h2>Inventory Read</h2></div><span class="as-of-pill" id="inventoryAsOf">AS OF —</span></div><div class="inventory-read" id="inventoryRead"><div class="empty-state compact">Awaiting weekly data.</div></div><div class="consensus-locked"><span>CONSENSUS SURPRISE</span><strong>NOT CONNECTED</strong><p>The terminal will not invent analyst consensus. Add a licensed source to activate surprise analytics.</p></div></article>
+        </div>
+      </section>
+
+      <section class="view" id="view-news" data-title="News Intelligence">
+        <div class="view-head"><div><div class="eyebrow">CONTINUOUS MULTI-SOURCE SCAN</div><h1>News Intelligence</h1><p>Deduplicated, ranked, mapped, and classified by estimated oil-market relevance.</p></div><div class="view-actions"><button class="ghost-button" id="saveNewsFilter">SAVE FILTER</button><button class="gold-button" id="newsRescan">RUN SCAN</button></div></div>
+        <div class="news-controls">
+          <div class="search-field"><span>⌕</span><input id="newsSearch" type="search" placeholder="Search loaded intelligence…"></div>
+          <label>WINDOW<select id="newsTimespan"><option value="24h">24 HOURS</option><option value="3d">3 DAYS</option><option value="7d">7 DAYS</option><option value="30d">30 DAYS</option></select></label>
+          <label>CATEGORY<select id="newsCategory"><option value="all">ALL</option></select></label>
+          <label>DIRECTION<select id="newsDirection"><option value="all">ALL</option><option value="bullish">UPWARD</option><option value="bearish">DOWNWARD</option><option value="mixed">MIXED</option></select></label>
+          <label>MIN IMPACT<input id="newsImpact" type="range" min="0" max="90" step="5" value="0"><output id="newsImpactOutput">0</output></label>
+        </div>
+        <div class="news-summary-strip" id="newsSummaryStrip"></div>
+        <article class="panel news-table-panel"><div class="table-toolbar"><span id="newsResultCount">0 RESULTS</span><div><button class="text-button" data-sort-news="impact">SORT: IMPACT</button><button class="text-button" data-action="export-news">EXPORT CSV</button></div></div><div class="news-table-wrap"><table class="terminal-table news-table" id="newsTable"><thead><tr><th>TIME</th><th>IMPACT</th><th>DIRECTION</th><th>HEADLINE / SOURCE</th><th>CLASS</th><th>REGION</th><th>CONF.</th><th>EVIDENCE</th></tr></thead><tbody></tbody></table></div></article>
+      </section>
+
+      <section class="view" id="view-decision" data-title="Decision Lab">
+        <div class="view-head"><div><div class="eyebrow">RULE-BASED SCENARIO ANALYSIS</div><h1>Decision Lab</h1><p>Stress-test oil-market conditions without disguising scenarios as forecasts.</p></div><div class="view-actions"><button class="ghost-button" id="resetScenario">RESET</button><button class="gold-button" id="saveScenario">SAVE SCENARIO</button></div></div>
+        <div class="decision-layout">
+          <article class="panel scenario-builder">
+            <div class="panel-head"><div><span class="panel-kicker">ASSUMPTIONS</span><h2>Scenario Builder</h2></div><select id="scenarioPreset" class="terminal-select"><option value="custom">CUSTOM</option><option value="hormuz">HORMUZ DISRUPTION</option><option value="opec">OPEC CUT</option><option value="inventory">LARGE INVENTORY DRAW</option><option value="refinery">REFINERY OUTAGE</option><option value="hurricane">GULF HURRICANE</option><option value="dollar">MAJOR DOLLAR MOVE</option></select></div>
+            <div class="scenario-fields">
+              <label><span>Supply disruption</span><output id="supplyOut">0.0 MMbbl/d</output><input id="supplySlider" type="range" min="-3" max="8" step="0.1" value="0"></label>
+              <label><span>OPEC output change</span><output id="opecOut">0.0 MMbbl/d</output><input id="opecSlider" type="range" min="-3" max="3" step="0.1" value="0"></label>
+              <label><span>U.S. inventory surprise</span><output id="inventoryOut">0.0 MMbbl</output><input id="inventorySlider" type="range" min="-20" max="20" step="0.5" value="0"></label>
+              <label><span>Refinery capacity offline</span><output id="refineryOut">0%</output><input id="refinerySlider" type="range" min="0" max="20" step="1" value="0"></label>
+              <label><span>Trade-weighted dollar move</span><output id="dollarOut">0.0%</output><input id="dollarSlider" type="range" min="-8" max="8" step="0.5" value="0"></label>
+              <label><span>Geopolitical risk intensity</span><output id="riskOut">0 / 100</output><input id="riskSlider" type="range" min="0" max="100" step="5" value="0"></label>
+            </div>
+            <label class="scenario-note"><span>THESIS / CONTEXT</span><textarea id="scenarioNote" rows="4" placeholder="Record the evidence and assumptions behind this scenario…"></textarea></label>
+          </article>
+          <article class="panel scenario-output">
+            <div class="panel-head"><div><span class="panel-kicker">DIRECTIONAL MODEL</span><h2>Scenario Impact</h2></div><span class="as-of-pill">NOT A FORECAST</span></div>
+            <div class="scenario-score"><div class="scenario-gauge"><i id="scenarioGauge"></i><span id="scenarioScore">0</span></div><div><small>MODELED PRESSURE SHIFT</small><h3 id="scenarioLabel">Neutral</h3><p id="scenarioNarrative">Adjust assumptions to explore directional dependencies.</p></div></div>
+            <div class="case-grid" id="caseGrid"></div>
+            <div class="dependency-list" id="dependencyList"></div>
+            <div class="method-box"><strong>Method boundary</strong><p>This is a transparent sensitivity model using operator-defined coefficients. It does not estimate a guaranteed price target, probability, or trade outcome.</p></div>
+          </article>
+        </div>
+        <article class="panel"><div class="panel-head"><div><span class="panel-kicker">SAVED ANALYSES</span><h2>Scenario Ledger</h2></div><button class="text-button" id="clearScenarios">CLEAR</button></div><div class="saved-scenarios" id="savedScenarios"><div class="empty-state compact">No scenarios saved.</div></div></article>
+      </section>
+
+      <section class="view" id="view-predictions" data-title="Prediction Ledger">
+        <div class="view-head"><div><div class="eyebrow">CALIBRATED JUDGMENT</div><h1>Prediction Ledger</h1><p>Record probabilistic calls, resolve outcomes, and measure calibration with Brier scoring.</p></div><div class="view-actions"><button class="ghost-button" data-action="export-predictions">EXPORT JSON</button></div></div>
+        <div class="prediction-layout">
+          <article class="panel prediction-form-panel"><div class="panel-head"><div><span class="panel-kicker">NEW PREDICTION</span><h2>Commit the Call</h2></div></div><form id="predictionForm" class="terminal-form">
+            <label><span>PREDICTION</span><textarea id="predictionText" required rows="3" placeholder="Example: WTI closes above $90 within 30 days."></textarea></label>
+            <div class="form-row"><label><span>PROBABILITY</span><div class="probability-input"><input id="predictionProbability" type="range" min="1" max="99" value="60"><output id="predictionProbabilityOut">60%</output></div></label><label><span>RESOLUTION DATE</span><input id="predictionDate" type="date" required></label></div>
+            <label><span>THESIS</span><textarea id="predictionThesis" rows="4" placeholder="Evidence, catalysts, invalidation conditions…"></textarea></label>
+            <button class="gold-button wide" type="submit">ADD TO LEDGER</button>
+          </form></article>
+          <article class="panel calibration-panel"><div class="panel-head"><div><span class="panel-kicker">PERFORMANCE</span><h2>Calibration</h2></div></div><div class="calibration-kpis"><div><span>OPEN</span><strong id="predOpen">0</strong></div><div><span>RESOLVED</span><strong id="predResolved">0</strong></div><div><span>BRIER SCORE</span><strong id="predBrier">—</strong></div><div><span>ACCURACY</span><strong id="predAccuracy">—</strong></div></div><canvas id="calibrationChart" height="230"></canvas><p class="calibration-note">Lower Brier scores are better. A score of 0 is perfect; unresolved predictions are excluded.</p></article>
+        </div>
+        <article class="panel"><div class="panel-head"><div><span class="panel-kicker">AUDITABLE FORECAST HISTORY</span><h2>Ledger</h2></div><div class="segmented"><button class="active" data-pred-filter="all">ALL</button><button data-pred-filter="open">OPEN</button><button data-pred-filter="resolved">RESOLVED</button></div></div><div class="prediction-list" id="predictionList"><div class="empty-state compact">No predictions recorded.</div></div></article>
+      </section>
+
+      <section class="view" id="view-alerts" data-title="Alerts">
+        <div class="view-head"><div><div class="eyebrow">OPERATOR-DEFINED EXCEPTIONS</div><h1>Alerts</h1><p>Monitor thresholds, keywords, impact scores, regions, and source failures.</p></div><div class="view-actions"><button class="ghost-button" id="requestNotifications">ENABLE BROWSER NOTIFICATIONS</button></div></div>
+        <div class="alert-layout">
+          <article class="panel"><div class="panel-head"><div><span class="panel-kicker">NEW RULE</span><h2>Create Alert</h2></div></div><form id="alertForm" class="terminal-form">
+            <label><span>ALERT TYPE</span><select id="alertType"><option value="price_above">PRICE ABOVE</option><option value="price_below">PRICE BELOW</option><option value="impact">NEWS IMPACT AT OR ABOVE</option><option value="keyword">KEYWORD IN HEADLINE</option><option value="region">REGION EVENT</option><option value="source_failure">SOURCE FAILURE</option></select></label>
+            <label id="alertInstrumentWrap"><span>INSTRUMENT</span><select id="alertInstrument"></select></label>
+            <label><span id="alertValueLabel">THRESHOLD</span><input id="alertValue" required placeholder="Example: 90"></label>
+            <label><span>RULE NAME</span><input id="alertName" required placeholder="WTI breakout / Hormuz keyword / etc."></label>
+            <button class="gold-button wide" type="submit">ACTIVATE RULE</button>
+          </form></article>
+          <article class="panel"><div class="panel-head"><div><span class="panel-kicker">ACTIVE MONITORING</span><h2>Rules</h2></div><span class="as-of-pill" id="alertEvalTime">NOT EVALUATED</span></div><div class="alert-rule-list" id="alertRuleList"><div class="empty-state compact">No active alert rules.</div></div></article>
+        </div>
+        <article class="panel"><div class="panel-head"><div><span class="panel-kicker">EXCEPTION HISTORY</span><h2>Triggered Alerts</h2></div><button class="text-button" id="clearAlertHistory">CLEAR HISTORY</button></div><div class="alert-history" id="alertHistory"><div class="empty-state compact">No alerts triggered.</div></div></article>
+      </section>
+
+      <section class="view" id="view-settings" data-title="Sources & Settings">
+        <div class="view-head"><div><div class="eyebrow">PROVENANCE, HEALTH & CONTROL</div><h1>Sources & Settings</h1><p>Every live value must identify its source, freshness, delay state, and failure condition.</p></div><div class="view-actions"><button class="ghost-button" id="clearCache">CLEAR CACHE</button><button class="gold-button" id="settingsRescan">TEST SOURCES</button></div></div>
+        <div class="settings-grid">
+          <article class="panel"><div class="panel-head"><div><span class="panel-kicker">SOURCE DIAGNOSTICS</span><h2>Provider Health</h2></div><span class="as-of-pill" id="healthAsOf">AS OF —</span></div><div class="provider-list" id="providerList"><div class="empty-state compact">No provider checks have run.</div></div></article>
+          <article class="panel"><div class="panel-head"><div><span class="panel-kicker">CAPABILITY STATE</span><h2>Data Configuration</h2></div></div><div class="capability-list" id="capabilityList"></div><div class="config-instructions"><strong>Optional environment keys</strong><code>FRED_API_KEY</code><code>EIA_API_KEY</code><code>ALPHA_VANTAGE_API_KEY</code><p>Keys are read by the local server from your environment or a .env launcher. They are never placed in browser storage.</p></div></article>
+        </div>
+        <div class="settings-grid">
+          <article class="panel"><div class="panel-head"><div><span class="panel-kicker">COMPOSITE GOVERNANCE</span><h2>Oil Pressure Weights</h2></div><button class="text-button" id="resetWeights">RESTORE DEFAULTS</button></div><div class="weight-list" id="weightList"></div><div class="weight-total"><span>TOTAL</span><strong id="weightTotal">100%</strong></div></article>
+          <article class="panel"><div class="panel-head"><div><span class="panel-kicker">OPERATING SETTINGS</span><h2>Terminal Behavior</h2></div></div><div class="toggle-list"><label><input id="autoRefreshToggle" type="checkbox" checked><span></span><div><strong>Auto-refresh live scan</strong><p>News ~60 seconds; public market series ~5 minutes.</p></div></label><label><input id="soundToggle" type="checkbox"><span></span><div><strong>Alert sound</strong><p>Play a local tone for newly triggered exceptions.</p></div></label><label><input id="compactToggle" type="checkbox"><span></span><div><strong>Compact density</strong><p>Increase terminal information density.</p></div></label></div><div class="danger-zone"><strong>Local data</strong><p>Predictions, alerts, scenarios, filters, and weight preferences are stored only in this browser profile.</p><button class="danger-button" id="resetLocalData">RESET LOCAL STATE</button></div></article>
+        </div>
+        <article class="panel provenance-panel"><div class="panel-head"><div><span class="panel-kicker">DATA PROVENANCE</span><h2>Source Boundaries</h2></div></div><div class="provenance-grid"><div><strong>News</strong><p>GDELT DOC 2.0 plus official EIA RSS. Headline classifications, inferred locations, impact, and direction are transparent rule-based estimates.</p></div><div><strong>Market indicators</strong><p>Official public series downloaded through FRED or its API. These are delayed/end-of-day observations, not exchange-grade real-time quotes.</p></div><div><strong>Fundamentals</strong><p>EIA weekly series distributed through FRED. Consensus surprise remains disabled without a real licensed consensus source.</p></div><div><strong>Decision boundary</strong><p>Research interface only. No order routing, brokerage connection, guaranteed forecast, or investment recommendation.</p></div></div></article>
+      </section>
+    </main>
+
+    <footer class="footer"><span>MERIDIAN INTELLIGENCE</span><p>Research terminal · Data may be delayed · Verify material decisions at the original source · Not investment advice</p><span id="footerVersion">v1.0</span></footer>
+  </div>
+
+  <div class="command-modal hidden" id="commandModal" role="dialog" aria-modal="true" aria-label="Command palette">
+    <div class="command-box">
+      <div class="command-input-wrap"><span>⌕</span><input id="commandInput" autocomplete="off" placeholder="Type: oil news Iran, show WTI 30d, high-impact shipping events…"><kbd>ESC</kbd></div>
+      <div class="command-results" id="commandResults"></div>
+      <div class="command-help"><span>↑↓ navigate</span><span>ENTER run</span><span>Examples: <b>open radar</b> · <b>news OPEC</b> · <b>show Brent</b> · <b>create alert</b></span></div>
+    </div>
+  </div>
+
+  <div class="toast-stack" id="toastStack" aria-live="polite"></div>
+  <div class="node-tooltip hidden" id="nodeTooltip"></div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
