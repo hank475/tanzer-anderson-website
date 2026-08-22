@@ -1,0 +1,110 @@
+name: NQ Intelligence Firm - Controlled Bootstrap
+
+on:
+  pull_request_target:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths:
+      - bootstrap/nq-intelligence-activation.txt
+
+permissions:
+  contents: write
+
+concurrency:
+  group: nq-intelligence-firm-production
+  cancel-in-progress: false
+
+env:
+  APP_DIR: /tmp/nq-intelligence-firm
+  RELEASE_PAYLOAD_DIR: cloud/nq-intelligence-firm-payload
+  RELEASE_ARCHIVE: /tmp/nq-intelligence-firm-release.tgz
+  RELEASE_SHA: cloud/nq-intelligence-firm-release.sha256
+  PAGES_DIR: /tmp/nq-intelligence-gh-pages
+  ROUTE_DIR: /tmp/nq-intelligence-gh-pages/nq-intelligence
+  PRODUCTION_URL: https://hank475.github.io/tanzer-anderson-website/nq-intelligence
+  PYTHONUNBUFFERED: '1'
+  TZ: America/Chicago
+
+jobs:
+  deploy:
+    if: github.actor == 'hank475'
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - name: Checkout trusted production source
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Verify and reconstruct immutable release
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat "$RELEASE_PAYLOAD_DIR"/part-* | tr -d '\r\n' | base64 --decode > "$RELEASE_ARCHIVE"
+          expected=$(awk 'NR==1 {print $1}' "$RELEASE_SHA")
+          echo "$expected  $RELEASE_ARCHIVE" | sha256sum --check
+          rm -rf "$APP_DIR" && mkdir -p "$APP_DIR"
+          tar -xzf "$RELEASE_ARCHIVE" -C "$APP_DIR"
+          test -s "$APP_DIR/src/main.py"
+          test -s "$APP_DIR/tests/test_system.py"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install bounded dependencies and test
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check -r "$APP_DIR/requirements.txt"
+          cd "$APP_DIR"
+          PYTHONPATH=. pytest -q
+
+      - name: Generate current edition into existing Pages branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin gh-pages
+          rm -rf "$PAGES_DIR"
+          git worktree add -B nq-intelligence-bootstrap-publish "$PAGES_DIR" origin/gh-pages
+          mkdir -p "$ROUTE_DIR"
+          touch "$PAGES_DIR/.nojekyll"
+          cd "$APP_DIR"
+          PYTHONPATH=. python -m src.main --output "$ROUTE_DIR" --base-url "$PRODUCTION_URL"
+
+      - name: Enforce exact two-page intelligence product
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$ROUTE_DIR/index.html"
+          test -s "$ROUTE_DIR/latest.pdf"
+          test -s "$ROUTE_DIR/status.json"
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          from pypdf import PdfReader
+          root = Path(os.environ['ROUTE_DIR'])
+          status = json.loads((root / 'status.json').read_text())
+          assert status['paid_api_keys'] == 0
+          assert len(PdfReader(str(root / 'latest.pdf')).pages) == 2
+          print(json.dumps(status, indent=2))
+          PY
+
+      - name: Publish NQ route without disturbing existing Pages content
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$PAGES_DIR"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add nq-intelligence .nojekyll
+          git commit -m "publish: bootstrap NQ intelligence $(date +%F)"
+          for attempt in 1 2 3 4; do
+            if git push origin HEAD:gh-pages; then exit 0; fi
+            git fetch origin gh-pages
+            git rebase origin/gh-pages
+            sleep $((attempt * 2))
+          done
+          exit 1
