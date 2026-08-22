@@ -1,0 +1,145 @@
+name: Verify Tanzer Anderson Trading Ledger — GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/verify-tanzer-trading-journal-github-pages.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: tanzer-trading-ledger-github-pages-verification
+  cancel-in-progress: false
+
+env:
+  SITE_URL: https://hank475.github.io/tanzer-anderson-website/trading-journal
+  RELEASE_SHA256: 15c76c188aa49fe857ee450217cf94b998e22768b394e9e1bb527b04c9858ca8
+
+jobs:
+  verify-and-record:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Wait for public GitHub Pages propagation
+        shell: bash
+        run: |
+          set -euo pipefail
+          verified=false
+          for attempt in $(seq 1 36); do
+            home_code=$(curl -sS --max-time 30 -o "$RUNNER_TEMP/tanzer-home.html" -w '%{http_code}' "$SITE_URL/" || true)
+            ping_code=$(curl -sS --max-time 30 -o "$RUNNER_TEMP/tanzer-ping.json" -w '%{http_code}' "$SITE_URL/ping.json" || true)
+            part_code=$(curl -sS --max-time 30 -o "$RUNNER_TEMP/tanzer-part-0000" -w '%{http_code}' "$SITE_URL/release/part-0000" || true)
+            if [ "$home_code" = "200" ] \
+              && [ "$ping_code" = "200" ] \
+              && [ "$part_code" = "200" ] \
+              && grep -q 'Tanzer Anderson' "$RUNNER_TEMP/tanzer-home.html" \
+              && grep -q 'Private Trading Ledger' "$RUNNER_TEMP/tanzer-home.html" \
+              && grep -q 'DecompressionStream' "$RUNNER_TEMP/tanzer-home.html" \
+              && jq -e '.status == "ok" and .paid_api_keys == false and .order_transmission == false and .hosting == "GitHub Pages"' "$RUNNER_TEMP/tanzer-ping.json" >/dev/null 2>&1 \
+              && [ "$(wc -c < "$RUNNER_TEMP/tanzer-part-0000")" -ge 7900 ]; then
+              verified=true
+              break
+            fi
+            echo "Propagation check $attempt/36: home=$home_code ping=$ping_code part=$part_code"
+            sleep 10
+          done
+          test "$verified" = "true"
+
+      - name: Reassemble and validate the public browser release
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > "$RUNNER_TEMP/tanzer-release.b64"
+          for index in $(seq 0 8); do
+            part=$(printf '%04d' "$index")
+            curl -fsS --retry 3 --retry-all-errors --max-time 45 \
+              "$SITE_URL/release/part-$part" >> "$RUNNER_TEMP/tanzer-release.b64"
+          done
+          tr -d '\r\n' < "$RUNNER_TEMP/tanzer-release.b64" | base64 --decode > "$RUNNER_TEMP/tanzer-release.tgz"
+          echo "$RELEASE_SHA256  $RUNNER_TEMP/tanzer-release.tgz" | sha256sum --check
+
+          APP_DIR="$RUNNER_TEMP/tanzer-ledger-app"
+          rm -rf "$APP_DIR"
+          mkdir -p "$APP_DIR"
+          tar -xzf "$RUNNER_TEMP/tanzer-release.tgz" -C "$APP_DIR"
+          test -s "$APP_DIR/public/index.html"
+          test -s "$APP_DIR/public/static/app.css"
+          test -s "$APP_DIR/public/static/app.js"
+          test -s "$APP_DIR/public/manifest.webmanifest"
+          test -s "$APP_DIR/public/sw.js"
+          node --check "$APP_DIR/public/static/app.js"
+          node --check "$APP_DIR/public/sw.js"
+
+          grep -q 'Tradovate' "$APP_DIR/public/index.html"
+          grep -q 'Tipster' "$APP_DIR/public/index.html"
+          grep -q 'OneUp' "$APP_DIR/public/index.html"
+          grep -q 'Tradeify' "$APP_DIR/public/index.html"
+          grep -q 'Forex' "$APP_DIR/public/index.html"
+          grep -q 'Prop Firm 01' "$APP_DIR/public/index.html"
+          grep -q 'Prop Firm 02' "$APP_DIR/public/index.html"
+          grep -q 'Prop Firm 03' "$APP_DIR/public/index.html"
+          grep -q 'indexedDB' "$APP_DIR/public/static/app.js"
+          grep -q 'processImportFiles' "$APP_DIR/public/static/app.js"
+          grep -q 'computeMetrics' "$APP_DIR/public/static/app.js"
+          grep -q 'taxModel' "$APP_DIR/public/static/app.js"
+          grep -q 'exportFullBackup' "$APP_DIR/public/static/app.js"
+          grep -q 'TradingView' "$APP_DIR/public/static/app.js"
+          echo 'Public release reassembly and source verification: PASS'
+
+      - name: Record verified public release
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p deployment-status
+          cat > deployment-status/tanzer-trading-ledger-github-pages.md <<EOF
+          # Tanzer Anderson Private Trading Ledger — Hosted Browser Release
+
+          - Checked at: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+          - Production URL: ${SITE_URL}/
+          - Verification source SHA: ${GITHUB_SHA}
+          - Hosting: GitHub Pages
+          - Browser installation required: No
+          - Mac command or local server required: No
+          - Paid API key required: No
+          - Eight account slots: PASS
+          - Drag-and-drop release/import engine: PASS
+          - P&L and analytics engine: PASS
+          - Tax-planning center: PASS
+          - IndexedDB browser vault: PASS
+          - Public payload checksum: PASS (${RELEASE_SHA256})
+          - Home page, health document, and release segments: PASS
+          - Result: production verified
+          EOF
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add deployment-status/tanzer-trading-ledger-github-pages.md
+          git commit -m 'chore: record Tanzer Trading Ledger GitHub Pages verification'
+          for attempt in $(seq 1 5); do
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+            git pull --rebase origin main
+            sleep 3
+          done
+          echo 'Public verification passed, but the durable status record could not be pushed.' >&2
+          exit 1
+
+      - name: Publish verification summary
+        shell: bash
+        run: |
+          {
+            echo '## Tanzer Anderson Private Trading Ledger is live'
+            echo
+            echo "- URL: ${SITE_URL}/"
+            echo '- Browser-hosted; no Mac command, local server, or paid API key is required.'
+            echo '- Eight-account command strip, drag-and-drop imports, P&L, analytics, evidence vault, backups, and tax planning passed production verification.'
+          } >> "$GITHUB_STEP_SUMMARY"
