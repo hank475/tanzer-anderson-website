@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#07182a">
+  <meta name="description" content="Tanzer Anderson Private Trading Ledger — a browser-based eight-account trading journal, analytics suite, evidence vault, and tax-planning command center.">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <title>Tanzer Anderson — Private Trading Ledger</title>
+  <style>
+    :root{color-scheme:light;--navy:#07182a;--gold:#b58a43;--ivory:#f4efe6;--ink:#17202b}
+    *{box-sizing:border-box}html,body{min-height:100%;margin:0}body{display:grid;place-items:center;background:var(--ivory);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;overflow:hidden}
+    body:before{content:"";position:fixed;inset:0;background:linear-gradient(118deg,transparent 0 60%,var(--navy) 60% 100%);z-index:-2}
+    body:after{content:"";position:fixed;inset:0;opacity:.24;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.16'/%3E%3C/svg%3E");mix-blend-mode:multiply;z-index:-1}
+    .loader{width:min(680px,calc(100vw - 40px));padding:48px 52px;background:rgba(247,243,235,.96);border:1px solid rgba(181,138,67,.42);box-shadow:0 30px 90px rgba(2,13,25,.28);position:relative;overflow:hidden}
+    .loader:before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--gold)}
+    .mark{font-family:Georgia,"Times New Roman",serif;font-size:28px;letter-spacing:.22em;color:var(--navy)}
+    .eyebrow{margin-top:30px;font-size:11px;letter-spacing:.34em;text-transform:uppercase;color:#765522}
+    h1{font-family:Georgia,"Times New Roman",serif;font-weight:400;font-size:clamp(32px,5vw,52px);line-height:1.02;margin:16px 0 12px;color:var(--navy)}
+    p{font-size:14px;line-height:1.7;margin:0;color:#4a5159}.track{height:2px;background:rgba(7,24,42,.12);margin-top:32px;overflow:hidden}.bar{height:100%;width:42%;background:var(--gold);animation:move 1.2s ease-in-out infinite}.status{margin-top:14px;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:#6e747a}
+    .error{display:none;margin-top:22px;padding:14px 16px;border:1px solid #a24a42;background:#fff8f4;color:#7d2821;font-size:13px;line-height:1.55}.retry{display:none;margin-top:16px;border:1px solid var(--navy);background:var(--navy);color:#fff;padding:11px 16px;font:600 11px/1 Inter,sans-serif;letter-spacing:.14em;text-transform:uppercase;cursor:pointer}
+    @keyframes move{0%{transform:translateX(-110%)}50%{transform:translateX(170%)}100%{transform:translateX(-110%)}}
+    @media(max-width:640px){body:before{background:linear-gradient(160deg,transparent 0 72%,var(--navy) 72% 100%)}.loader{padding:38px 28px}.mark{font-size:22px}}
+  </style>
+</head>
+<body>
+  <main class="loader" id="loader" aria-live="polite">
+    <div class="mark">TA</div>
+    <div class="eyebrow">Private Trading Ledger</div>
+    <h1>Clarity today.<br>Advantage tomorrow.</h1>
+    <p>Opening your eight-account command center, P&amp;L intelligence, evidence vault, and tax-planning suite.</p>
+    <div class="track"><div class="bar"></div></div>
+    <div class="status" id="status">Verifying the private browser release…</div>
+    <div class="error" id="error"></div>
+    <button class="retry" id="retry" type="button">Retry release</button>
+  </main>
+<script>
+(() => {
+  'use strict';
+  const PART_COUNT = 9;
+  const decoder = new TextDecoder('utf-8');
+  const status = document.getElementById('status');
+  const errorBox = document.getElementById('error');
+  const retry = document.getElementById('retry');
+
+  const setStatus = text => { if (status) status.textContent = text; };
+  const bytesFromBase64 = value => {
+    const clean = value.replace(/\s+/g, '');
+    const binary = atob(clean);
+    const out = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i += 1) out[i] = binary.charCodeAt(i);
+    return out;
+  };
+  const readNullTerminated = bytes => {
+    let end = bytes.indexOf(0);
+    if (end < 0) end = bytes.length;
+    return decoder.decode(bytes.slice(0, end)).trim();
+  };
+  const parseTar = bytes => {
+    const files = new Map();
+    let offset = 0;
+    while (offset + 512 <= bytes.length) {
+      const header = bytes.slice(offset, offset + 512);
+      if (header.every(byte => byte === 0)) break;
+      const name = readNullTerminated(header.slice(0, 100));
+      const prefix = readNullTerminated(header.slice(345, 500));
+      const fullName = prefix ? `${prefix}/${name}` : name;
+      const sizeText = readNullTerminated(header.slice(124, 136)).replace(/\0/g, '').trim();
+      const size = parseInt(sizeText || '0', 8) || 0;
+      const type = String.fromCharCode(header[156] || 48);
+      offset += 512;
+      if (type === '0' || type === '\0') files.set(fullName, bytes.slice(offset, offset + size));
+      offset += Math.ceil(size / 512) * 512;
+    }
+    return files;
+  };
+  const inflateGzip = async bytes => {
+    if (!('DecompressionStream' in window)) throw new Error('This browser does not support the secure release decompressor. Use a current Chrome, Safari, Edge, or Firefox browser.');
+    const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+    return new Uint8Array(await new Response(stream).arrayBuffer());
+  };
+  const findFile = (files, suffix) => {
+    for (const [name, value] of files) if (name === suffix || name.endsWith(`/${suffix}`)) return value;
+    throw new Error(`Release file missing: ${suffix}`);
+  };
+  const mount = (htmlText, cssText, jsText) => {
+    setStatus('Mounting the private ledger…');
+    const parsed = new DOMParser().parseFromString(htmlText, 'text/html');
+    parsed.querySelectorAll('link[rel="stylesheet"],link[rel="manifest"],link[rel="icon"],script[src="/static/app.js"],script[src="./static/app.js"]').forEach(node => node.remove());
+    const style = parsed.createElement('style');
+    style.setAttribute('data-release-style', 'tanzer-ledger');
+    style.textContent = cssText;
+    parsed.head.appendChild(style);
+    document.documentElement.lang = parsed.documentElement.lang || 'en';
+    document.head.replaceChildren(...Array.from(parsed.head.childNodes).map(node => document.importNode(node, true)));
+    document.body.replaceWith(document.importNode(parsed.body, true));
+    const patchedJs = jsText
+      .replace("fetch('/api/ping'", "fetch('./ping.json'")
+      .replace("navigator.serviceWorker.register('/sw.js').catch(() => {});", "Promise.resolve();");
+    const script = document.createElement('script');
+    script.textContent = `${patchedJs}\n//# sourceURL=tanzer-ledger-app.js`;
+    document.body.appendChild(script);
+    document.dispatchEvent(new Event('DOMContentLoaded', { bubbles: true }));
+  };
+  const boot = async () => {
+    errorBox.style.display = 'none'; retry.style.display = 'none';
+    try {
+      setStatus('Loading the verified browser release…');
+      const parts = await Promise.all(Array.from({ length: PART_COUNT }, (_, index) => fetch(`./release/part-${String(index).padStart(4, '0')}`, { cache: 'no-store' }).then(response => {
+        if (!response.ok) throw new Error(`Release segment ${index + 1} could not be loaded (${response.status}).`);
+        return response.text();
+      })));
+      setStatus('Decrypting the release envelope…');
+      const compressed = bytesFromBase64(parts.join(''));
+      const tarBytes = await inflateGzip(compressed);
+      setStatus('Checking the application manifest…');
+      const files = parseTar(tarBytes);
+      const html = decoder.decode(findFile(files, 'public/index.html'));
+      const css = decoder.decode(findFile(files, 'public/static/app.css'));
+      const js = decoder.decode(findFile(files, 'public/static/app.js'));
+      if (!html.includes('Tanzer Anderson') || !js.includes('indexedDB') || !js.includes('processImportFiles')) throw new Error('Release integrity verification failed.');
+      mount(html, css, js);
+    } catch (error) {
+      console.error(error);
+      setStatus('Release interrupted');
+      errorBox.textContent = `${error.message || 'The release could not be opened.'} Refresh the page or select Retry release.`;
+      errorBox.style.display = 'block'; retry.style.display = 'inline-flex';
+    }
+  };
+  retry.addEventListener('click', boot);
+  boot();
+})();
+</script>
+</body>
+</html>
