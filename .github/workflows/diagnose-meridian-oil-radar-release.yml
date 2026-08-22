@@ -1,11 +1,11 @@
 name: Diagnose Meridian Oil Radar Release
 
 on:
-  pull_request_target:
-    types: [synchronize, reopened]
+  push:
     branches: [main]
     paths:
-      - cloud/meridian-oil-radar-deploy-signal
+      - cloud/meridian-oil-radar-push-signal
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -102,6 +102,7 @@ jobs:
           # Meridian Oil Radar — Release Diagnostic
 
           - Checked at: ${checked}
+          - Event: ${GITHUB_EVENT_NAME}
           - Result: ${result}
           - Last stage: ${stage}
           - Detail: ${detail}
@@ -117,13 +118,16 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add deployment-status/meridian-oil-radar-release-diagnostic.md
           git commit -m "chore: record Meridian Oil Radar release diagnostic ${result}"
+          pushed=false
           for attempt in $(seq 1 5); do
             if git push origin HEAD:main; then
+              pushed=true
               break
             fi
             git pull --rebase origin main
             sleep 2
           done
+          [ "$pushed" = true ] || exit 1
 
           if [ "$result" != pass ]; then
             echo "$detail" >&2
