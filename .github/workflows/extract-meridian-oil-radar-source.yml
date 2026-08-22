@@ -1,0 +1,87 @@
+name: Extract Meridian Oil Radar Source
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/extract-meridian-oil-radar-source.yml
+      - cloud/meridian-oil-radar-payload/**
+      - cloud/meridian-oil-radar-release.sha256
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: extract-meridian-oil-radar-source
+  cancel-in-progress: false
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Reconstruct validated release
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/meridian-oil-radar-release.tgz"
+          app="$RUNNER_TEMP/meridian-oil-radar"
+          cat cloud/meridian-oil-radar-payload/part-* | tr -d '\r\n' | base64 --decode > "$archive"
+          expected=$(awk 'NR==1 {print $1}' cloud/meridian-oil-radar-release.sha256)
+          echo "$expected  $archive" | sha256sum --check
+          rm -rf "$app"
+          mkdir -p "$app"
+          tar -xzf "$archive" -C "$app"
+          test -s "$app/public/index.html"
+          test -s "$app/public/static/app.js"
+          test -s "$app/public/static/styles.css"
+          test -s "$app/functions/api/[[path]].js"
+          echo "APP_DIR=$app" >> "$GITHUB_ENV"
+
+      - name: Publish inspectable source tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          out=cloud/meridian-oil-radar-extracted
+          rm -rf "$out"
+          mkdir -p "$out/public/static" "$out/functions/api"
+          cp "$APP_DIR/public/index.html" "$out/public/index.html"
+          cp "$APP_DIR/public/static/app.js" "$out/public/static/app.js"
+          cp "$APP_DIR/public/static/styles.css" "$out/public/static/styles.css"
+          cp "$APP_DIR/functions/api/[[path]].js" "$out/functions/api/handler.js"
+          cp "$APP_DIR/wrangler.jsonc" "$out/wrangler.jsonc"
+          if [ -f "$APP_DIR/public/_routes.json" ]; then cp "$APP_DIR/public/_routes.json" "$out/public/_routes.json"; fi
+          printf '%s\n' '# Meridian Oil Radar Extracted Source' '' 'Validated source extracted from the release payload for browser-hosting conversion.' > "$out/README.md"
+          node --check "$out/public/static/app.js"
+          node --check "$out/functions/api/handler.js"
+
+      - name: Record extraction result
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p deployment-status
+          cat > deployment-status/meridian-oil-radar-extraction.md <<EOF
+          # Meridian Oil Radar — Source Extraction
+
+          - Checked at: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+          - Result: success
+          - Release checksum: verified
+          - Frontend source: extracted
+          - Data handler source: extracted
+          - Browser installation required: No
+          EOF
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add cloud/meridian-oil-radar-extracted deployment-status/meridian-oil-radar-extraction.md
+          git commit -m 'build: extract Meridian Oil Radar browser source'
+          for attempt in $(seq 1 5); do
+            if git push origin HEAD:main; then exit 0; fi
+            git pull --rebase origin main
+            sleep 2
+          done
+          exit 1
