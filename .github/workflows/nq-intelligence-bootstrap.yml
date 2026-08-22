@@ -11,8 +11,8 @@ permissions:
   contents: write
 
 concurrency:
-  group: nq-intelligence-firm-production
-  cancel-in-progress: false
+  group: nq-intelligence-firm-bootstrap
+  cancel-in-progress: true
 
 env:
   APP_DIR: /tmp/nq-intelligence-firm
