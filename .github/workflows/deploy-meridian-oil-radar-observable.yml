@@ -1,17 +1,19 @@
 name: Deploy Meridian Oil Radar Observable
 
 on:
-  pull_request:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
     branches: [main]
     paths:
       - cloud/meridian-oil-radar-deploy-signal
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
+  pull-requests: read
 
 concurrency:
-  group: meridian-oil-radar-production
+  group: meridian-oil-radar-observable
   cancel-in-progress: false
 
 env:
@@ -27,18 +29,28 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
     steps:
-      - name: Check out repository
+      - name: Check out trusted base repository
         uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Initialize deployment diagnostics
+        shell: bash
+        run: |
+          echo 'initialization' > "$RUNNER_TEMP/meridian-stage"
+          echo 'Observable deployment initialized from trusted main branch.'
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Reconstruct and validate release
         shell: bash
         run: |
           set -euo pipefail
+          echo 'release-reconstruction' > "$RUNNER_TEMP/meridian-stage"
           test -n "$CLOUDFLARE_API_TOKEN"
           test -n "$CLOUDFLARE_ACCOUNT_ID"
           APP_DIR="$RUNNER_TEMP/meridian-oil-radar"
@@ -60,6 +72,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          echo 'cloudflare-project' > "$RUNNER_TEMP/meridian-stage"
           api="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects"
           code=$(curl -sS -o "$RUNNER_TEMP/project.json" -w '%{http_code}' \
             -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
@@ -83,6 +96,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          echo 'cloudflare-deployment' > "$RUNNER_TEMP/meridian-stage"
           cd "$APP_DIR"
           npx --yes wrangler@latest pages deploy \
             --project-name "$PROJECT_NAME" \
@@ -96,6 +110,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          echo 'production-verification' > "$RUNNER_TEMP/meridian-stage"
           api="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/${PROJECT_NAME}"
           curl -fsS \
             -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
@@ -108,6 +123,8 @@ jobs:
             http://*|https://*) site_url="$subdomain" ;;
             *) site_url="https://${subdomain}" ;;
           esac
+          echo "site_url=$site_url" >> "$GITHUB_OUTPUT"
+          echo "MERIDIAN_OIL_RADAR_URL=$site_url"
 
           verified=false
           for attempt in $(seq 1 18); do
@@ -127,11 +144,45 @@ jobs:
           jq -e '.demo == false and (.items | type == "array")' "$RUNNER_TEMP/news.json" >/dev/null
           curl -fsS --max-time 90 "$site_url/api/market?days=30" > "$RUNNER_TEMP/market.json"
           jq -e '.demo == false and (.instruments | type == "object")' "$RUNNER_TEMP/market.json" >/dev/null
-          echo "site_url=$site_url" >> "$GITHUB_OUTPUT"
-          echo "MERIDIAN_OIL_RADAR_URL=$site_url"
           echo 'PUBLIC_BROWSER_AND_API_VERIFICATION=PASS'
 
+      - name: Record observable result on main
+        if: always()
+        shell: bash
+        env:
+          SITE_URL: ${{ steps.verify.outputs.site_url }}
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          set -euo pipefail
+          stage=$(cat "$RUNNER_TEMP/meridian-stage" 2>/dev/null || echo unknown)
+          checked=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          mkdir -p deployment-status
+          cat > deployment-status/meridian-oil-radar-observable.md <<EOF
+          # Meridian Oil Radar — Observable Deployment
+
+          - Checked at: ${checked}
+          - Job status: ${JOB_STATUS}
+          - Last stage: ${stage}
+          - Production URL: ${SITE_URL:-not-resolved}
+          - Hosting target: Cloudflare Pages + Pages Functions
+          - Browser installation required: No
+          - Synthetic/demo values: Disabled
+          EOF
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add deployment-status/meridian-oil-radar-observable.md
+          git commit -m "chore: record Meridian Oil Radar observable ${JOB_STATUS}"
+          for attempt in $(seq 1 5); do
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+            git pull --rebase origin main
+            sleep 3
+          done
+          exit 1
+
       - name: Publish observable deployment summary
+        if: success()
         shell: bash
         env:
           SITE_URL: ${{ steps.verify.outputs.site_url }}
