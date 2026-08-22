@@ -1,6 +1,7 @@
 # Meridian Oil Radar — Release Diagnostic
 
-- Checked at: 2026-08-22T02:09:05Z
+- Checked at: 2026-08-22T02:10:15Z
+- Event: push
 - Result: fail
 - Last stage: credentials
 - Detail: CLOUDFLARE_API_TOKEN is unavailable.
