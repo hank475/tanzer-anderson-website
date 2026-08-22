@@ -1,0 +1,349 @@
+name: Publish Meridian Oil Radar Webpage
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/publish-meridian-oil-radar-webpage.yml
+      - cloud/meridian-oil-radar-extracted/**
+  workflow_dispatch:
+  schedule:
+    - cron: '7,22,37,52 * * * *'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: meridian-oil-radar-github-pages
+  cancel-in-progress: false
+
+env:
+  PUBLIC_URL: https://hank475.github.io/tanzer-anderson-website/oil-radar/
+  SOURCE_DIR: cloud/meridian-oil-radar-extracted
+
+jobs:
+  publish-and-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out source repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Prepare existing GitHub Pages branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo 'pages-branch' > "$RUNNER_TEMP/meridian-stage"
+          git fetch origin gh-pages
+          rm -rf "$RUNNER_TEMP/ta-gh-pages"
+          git worktree add --detach "$RUNNER_TEMP/ta-gh-pages" origin/gh-pages
+          echo "PAGES_WORKTREE=$RUNNER_TEMP/ta-gh-pages" >> "$GITHUB_ENV"
+
+      - name: Build hosted browser release and refresh public-source data
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo 'browser-build' > "$RUNNER_TEMP/meridian-stage"
+          test -s "$SOURCE_DIR/public/index.html"
+          test -s "$SOURCE_DIR/public/static/app.js"
+          test -s "$SOURCE_DIR/public/static/styles.css"
+          test -s "$SOURCE_DIR/functions/api/handler.js"
+
+          SITE_DIR="$RUNNER_TEMP/meridian-oil-radar-site"
+          BUILD_DIR="$RUNNER_TEMP/meridian-oil-radar-build"
+          rm -rf "$SITE_DIR" "$BUILD_DIR"
+          mkdir -p "$SITE_DIR/api" "$BUILD_DIR"
+          cp -R "$SOURCE_DIR/public/." "$SITE_DIR/"
+          cp "$SOURCE_DIR/functions/api/handler.js" "$BUILD_DIR/handler.mjs"
+          echo "SITE_DIR=$SITE_DIR" >> "$GITHUB_ENV"
+          echo "BUILD_DIR=$BUILD_DIR" >> "$GITHUB_ENV"
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import os, re
+
+          site = Path(os.environ['RUNNER_TEMP']) / 'meridian-oil-radar-site'
+          page = site / 'index.html'
+          html = page.read_text(encoding='utf-8')
+          html = html.replace('href="/static/', 'href="./static/')
+          html = html.replace('src="/static/', 'src="./static/')
+          html = html.replace(
+              '<meta name="description" content="Meridian Oil Radar — live oil news and indicator intelligence terminal.">',
+              '<meta name="description" content="Meridian Oil Radar — continuously refreshed oil news and indicator intelligence terminal.">\n  <meta name="robots" content="noindex,nofollow,noarchive">'
+          )
+          html = html.replace(
+              '<div class="global-banner warning hidden" id="dataWarning"></div>',
+              '<div class="global-banner warning hidden" id="dataWarning"></div>\n      <div class="global-banner"><strong>HOSTED DATA MODE</strong> — Public oil news and delayed indicators refresh every 15 minutes. Exact source and as-of timestamps remain visible.</div>'
+          )
+          html = html.replace('Live evidence, market pressure, supply risk, and high-impact developments', 'Continuously refreshed evidence, market pressure, supply risk, and high-impact developments')
+          html = html.replace('Initializing live intelligence surfaces…', 'Loading hosted intelligence surfaces…')
+          page.write_text(html, encoding='utf-8')
+
+          app_path = site / 'static' / 'app.js'
+          app = app_path.read_text(encoding='utf-8')
+          pattern = re.compile(r"  const API = \{\n.*?\n  \};", re.S)
+          replacement = """  const API = {
+            config: './api/config.json',
+            snapshot: './api/snapshot.json',
+            news: './api/news.json',
+            health: './api/source-health.json',
+            clearCache: './api/cache-clear.json'
+          };"""
+          app, count = pattern.subn(replacement, app, count=1)
+          if count != 1:
+              raise SystemExit('Could not replace API routing block')
+          app_path.write_text(app, encoding='utf-8')
+          PY
+
+          cat > "$BUILD_DIR/generate-snapshots.mjs" <<'NODE'
+          import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+          import { join } from 'node:path';
+          import { onRequest } from './handler.mjs';
+
+          const siteDir = process.argv[2];
+          const oldSnapshotPath = process.argv[3];
+          const apiDir = join(siteDir, 'api');
+          mkdirSync(apiDir, { recursive: true });
+
+          globalThis.caches = {
+            default: {
+              match: async () => null,
+              put: async () => undefined,
+              delete: async () => true,
+            },
+          };
+
+          async function callRoute(route) {
+            const waits = [];
+            const request = new Request(`https://meridian.invalid/api/${route}`);
+            const response = await onRequest({
+              request,
+              env: {},
+              params: { path: route.split('/') },
+              waitUntil: promise => waits.push(Promise.resolve(promise)),
+            });
+            await Promise.allSettled(waits);
+            const body = await response.json();
+            if (!response.ok) throw new Error(`${route}: ${response.status} ${body.error || body.status || 'request failed'}`);
+            return body;
+          }
+
+          function sectionGood(value) {
+            return value && value.status === 'ok';
+          }
+          function markFallback(value, reason, attemptedAt) {
+            return {
+              ...value,
+              stale: true,
+              stale_reason: reason,
+              last_refresh_attempt: attemptedAt,
+            };
+          }
+          function writeJSON(name, value) {
+            writeFileSync(join(apiDir, name), `${JSON.stringify(value)}\n`, 'utf8');
+          }
+
+          const now = new Date().toISOString();
+          let config = await callRoute('config');
+          let snapshot = await callRoute('snapshot');
+          let previous = null;
+          if (oldSnapshotPath && existsSync(oldSnapshotPath)) {
+            try { previous = JSON.parse(readFileSync(oldSnapshotPath, 'utf8')); } catch {}
+          }
+
+          const fallbacks = [];
+          for (const key of ['market', 'fundamentals', 'news']) {
+            if (!sectionGood(snapshot[key]) && sectionGood(previous?.[key])) {
+              snapshot[key] = markFallback(previous[key], `Latest ${key} refresh failed; retaining the last verified observation.`, now);
+              fallbacks.push(key);
+            }
+          }
+          if ((!snapshot.pressure || snapshot.pressure.status !== 'ok') && previous?.pressure?.status === 'ok') {
+            snapshot.pressure = markFallback(previous.pressure, 'Latest composite refresh lacked sufficient inputs; retaining the last verified calculation.', now);
+            fallbacks.push('pressure');
+          }
+
+          snapshot.status = ['market', 'fundamentals', 'news'].some(key => sectionGood(snapshot[key])) ? 'ok' : 'unavailable';
+          snapshot.demo = false;
+          snapshot.hosting = 'GitHub Pages scheduled snapshots';
+          snapshot.snapshot_mode = 'scheduled';
+          snapshot.refresh_interval_minutes = 15;
+          snapshot.last_refresh_attempt = now;
+          snapshot.fallback_sections = fallbacks;
+
+          config = {
+            ...config,
+            demo: false,
+            hosting: 'GitHub Pages scheduled snapshots',
+            generated_at: now,
+            snapshot_mode: 'scheduled',
+            refresh_interval_minutes: 15,
+            capabilities: {
+              ...(config.capabilities || {}),
+              live_news: false,
+              scheduled_news_snapshots: true,
+              public_delayed_market_data: true,
+            },
+            refresh_defaults: { news_seconds: 900, market_seconds: 900, fundamentals_seconds: 900 },
+          };
+
+          const sources = {
+            ...(snapshot.market?.source_health || {}),
+            ...(snapshot.fundamentals?.source_health || {}),
+            ...(snapshot.news?.source_health || {}),
+          };
+          const sourceHealth = {
+            generated_at: now,
+            demo: false,
+            sources,
+            environment: {
+              fred_key_configured: false,
+              eia_key_configured: false,
+              alpha_vantage_key_configured: false,
+            },
+            hosting: 'GitHub Pages scheduled snapshots',
+            snapshot_mode: 'scheduled',
+          };
+          const metadata = {
+            app: 'Meridian Oil Radar',
+            status: snapshot.status,
+            generated_at: now,
+            refresh_interval_minutes: 15,
+            hosting: 'GitHub Pages',
+            demo: false,
+            fallback_sections: fallbacks,
+            news_items: snapshot.news?.items?.length || 0,
+            market_series: snapshot.market?.available_count || 0,
+            fundamental_series: snapshot.fundamentals?.available_count || 0,
+          };
+
+          writeJSON('config.json', config);
+          writeJSON('snapshot.json', snapshot);
+          writeJSON('news.json', snapshot.news || { status: 'unavailable', items: [], generated_at: now, demo: false });
+          writeJSON('market.json', snapshot.market || { status: 'unavailable', instruments: {}, generated_at: now, demo: false });
+          writeJSON('fundamentals.json', snapshot.fundamentals || { status: 'unavailable', indicators: {}, generated_at: now, demo: false });
+          writeJSON('source-health.json', sourceHealth);
+          writeJSON('ping.json', { status: 'ok', app: 'Meridian Oil Radar', version: '2.1.0-pages', generated_at: now, demo: false, hosting: 'GitHub Pages scheduled snapshots' });
+          writeJSON('cache-clear.json', { status: 'not_applicable', detail: 'Hosted snapshots are refreshed by the scheduled publishing workflow.', generated_at: now, demo: false });
+          writeJSON('meta.json', metadata);
+          NODE
+
+          node "$BUILD_DIR/generate-snapshots.mjs" \
+            "$SITE_DIR" \
+            "$PAGES_WORKTREE/oil-radar/api/snapshot.json"
+
+          touch "$SITE_DIR/.nojekyll"
+          node --check "$SITE_DIR/static/app.js"
+          python3 -m json.tool "$SITE_DIR/api/config.json" >/dev/null
+          python3 -m json.tool "$SITE_DIR/api/snapshot.json" >/dev/null
+          python3 -m json.tool "$SITE_DIR/api/source-health.json" >/dev/null
+          grep -q 'Meridian Oil Radar' "$SITE_DIR/index.html"
+          grep -q "'./api/snapshot.json'" "$SITE_DIR/static/app.js"
+          if grep -R -q 'localhost:8765' "$SITE_DIR"; then
+            echo 'Local-only address found in browser release.' >&2
+            exit 1
+          fi
+          jq -e '.demo == false and .snapshot_mode == "scheduled" and (.news.items | type == "array") and (.market.instruments | type == "object")' "$SITE_DIR/api/snapshot.json" >/dev/null
+          echo 'Hosted browser build QA: PASS'
+
+      - name: Publish beneath the existing GitHub Pages site
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo 'github-pages-publish' > "$RUNNER_TEMP/meridian-stage"
+          rm -rf "$PAGES_WORKTREE/oil-radar"
+          mkdir -p "$PAGES_WORKTREE/oil-radar"
+          cp -R "$SITE_DIR/." "$PAGES_WORKTREE/oil-radar/"
+          touch "$PAGES_WORKTREE/.nojekyll"
+          cd "$PAGES_WORKTREE"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add oil-radar .nojekyll
+          if ! git diff --cached --quiet; then
+            git commit -m "publish: refresh Meridian Oil Radar $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            for attempt in $(seq 1 5); do
+              if git push origin HEAD:gh-pages; then
+                break
+              fi
+              if [ "$attempt" = '5' ]; then exit 1; fi
+              sleep 3
+            done
+          fi
+
+      - name: Verify public webpage and hosted data
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo 'production-verification' > "$RUNNER_TEMP/meridian-stage"
+          verified=false
+          for attempt in $(seq 1 30); do
+            home_code=$(curl -sS -L --max-time 30 -o "$RUNNER_TEMP/oil-radar-home.html" -w '%{http_code}' "$PUBLIC_URL" || true)
+            snapshot_code=$(curl -sS -L --max-time 45 -o "$RUNNER_TEMP/oil-radar-snapshot.json" -w '%{http_code}' "${PUBLIC_URL}api/snapshot.json" || true)
+            if [ "$home_code" = '200' ] \
+              && [ "$snapshot_code" = '200' ] \
+              && grep -q 'Meridian Oil Radar' "$RUNNER_TEMP/oil-radar-home.html" \
+              && jq -e '.demo == false and .snapshot_mode == "scheduled" and (.news.items | type == "array") and (.market.instruments | type == "object")' "$RUNNER_TEMP/oil-radar-snapshot.json" >/dev/null 2>&1; then
+              verified=true
+              break
+            fi
+            echo "Propagation check $attempt/30: home=$home_code snapshot=$snapshot_code"
+            sleep 10
+          done
+          test "$verified" = 'true'
+          echo 'Meridian Oil Radar public browser verification: PASS'
+
+      - name: Record durable deployment status
+        if: always()
+        shell: bash
+        env:
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+          stage=$(cat "$RUNNER_TEMP/meridian-stage" 2>/dev/null || echo unknown)
+          checked=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          news_count=$(jq -r '.news.items | length' "$SITE_DIR/api/snapshot.json" 2>/dev/null || echo 0)
+          market_count=$(jq -r '.market.available_count // 0' "$SITE_DIR/api/snapshot.json" 2>/dev/null || echo 0)
+          fundamental_count=$(jq -r '.fundamentals.available_count // 0' "$SITE_DIR/api/snapshot.json" 2>/dev/null || echo 0)
+          snapshot_at=$(jq -r '.generated_at // .last_refresh_attempt // "unavailable"' "$SITE_DIR/api/snapshot.json" 2>/dev/null || echo unavailable)
+          fallbacks=$(jq -r '(.fallback_sections // []) | join(", ") | if length == 0 then "none" else . end' "$SITE_DIR/api/snapshot.json" 2>/dev/null || echo unavailable)
+          mkdir -p deployment-status
+          cat > deployment-status/meridian-oil-radar-github-pages.md <<EOF
+          # Meridian Oil Radar — Hosted Webpage
+
+          - Checked at: ${checked}
+          - Job status: ${JOB_STATUS}
+          - Last stage: ${stage}
+          - Production URL: ${PUBLIC_URL}
+          - Hosting: GitHub Pages
+          - Browser installation required: No
+          - Mac download required: No
+          - Replit required: No
+          - External deployment secrets required: No
+          - Scheduled refresh cadence: 15 minutes
+          - Snapshot generated at: ${snapshot_at}
+          - News intelligence items: ${news_count}
+          - Available market series: ${market_count}
+          - Available fundamental series: ${fundamental_count}
+          - Last-good fallback sections: ${fallbacks}
+          - Synthetic/demo values: Disabled
+          EOF
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add deployment-status/meridian-oil-radar-github-pages.md
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: record Meridian Oil Radar webpage ${JOB_STATUS}"
+            for attempt in $(seq 1 5); do
+              if git push origin HEAD:main; then exit 0; fi
+              git pull --rebase origin main
+              sleep 3
+            done
+            exit 1
+          fi
