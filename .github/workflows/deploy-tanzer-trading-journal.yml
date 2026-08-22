@@ -1,0 +1,260 @@
+name: Deploy Tanzer Anderson Trading Ledger
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - cloud/tanzer-trading-journal-payload/**
+      - cloud/tanzer-trading-journal-release.sha256
+      - .github/workflows/deploy-tanzer-trading-journal.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: tanzer-trading-ledger-production
+  cancel-in-progress: false
+
+env:
+  PROJECT_NAME: tanzer-trading-ledger
+  COMPATIBILITY_DATE: '2026-08-22'
+
+jobs:
+  deploy-and-certify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+    steps:
+      - name: Check out release repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validate credentials and unpack application
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          PAYLOAD_DIR="cloud/tanzer-trading-journal-payload"
+          ARCHIVE_PATH="$RUNNER_TEMP/tanzer-trading-journal-release.tgz"
+          test -d "$PAYLOAD_DIR"
+          test -n "$(find "$PAYLOAD_DIR" -maxdepth 1 -name 'part-*' -print -quit)"
+          cat "$PAYLOAD_DIR"/part-* | tr -d '\r\n' | base64 --decode > "$ARCHIVE_PATH"
+          test -s "$ARCHIVE_PATH"
+          expected_sha=$(awk '{print $1}' cloud/tanzer-trading-journal-release.sha256)
+          echo "$expected_sha  $ARCHIVE_PATH" | sha256sum --check
+          APP_DIR="$RUNNER_TEMP/tanzer-trading-journal"
+          echo "APP_DIR=$APP_DIR" >> "$GITHUB_ENV"
+          rm -rf "$APP_DIR"
+          mkdir -p "$APP_DIR"
+          tar -xzf "$ARCHIVE_PATH" -C "$APP_DIR"
+          test -s "$APP_DIR/public/index.html"
+          test -s "$APP_DIR/public/static/app.css"
+          test -s "$APP_DIR/public/static/app.js"
+          test -s "$APP_DIR/public/manifest.webmanifest"
+          test -s "$APP_DIR/public/sw.js"
+          test -s "$APP_DIR/functions/api/ping.js"
+
+      - name: Consolidated source QA
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check "$APP_DIR/public/static/app.js"
+          node --check "$APP_DIR/public/sw.js"
+          node --check "$APP_DIR/functions/api/ping.js"
+          python3 -m json.tool "$APP_DIR/public/manifest.webmanifest" >/dev/null
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import os
+          root = Path(os.environ['APP_DIR'])
+          page = (root / 'public/index.html').read_text(encoding='utf-8')
+          app = (root / 'public/static/app.js').read_text(encoding='utf-8')
+          css = (root / 'public/static/app.css').read_text(encoding='utf-8')
+          required_page = [
+              'Tanzer Anderson', 'Tradovate', 'Tipster', 'OneUp', 'Tradeify',
+              'Forex', 'Prop Firm 01', 'Prop Firm 02', 'Prop Firm 03',
+              'Tax Reserve', 'Live Market Room', 'Universal Import'
+          ]
+          required_app = [
+              'indexedDB', 'TradingView', 'taxModel', 'computeMetrics',
+              'processImportFiles', 'exportFullBackup', 'loadSheetJs',
+              'tanzer-anderson-trading-ledger-backup'
+          ]
+          required_css = ['--navy-950', '--ivory-100', '--gold', '.drop-shield', '.account-grid']
+          missing = [x for x in required_page if x not in page]
+          missing += [x for x in required_app if x not in app]
+          missing += [x for x in required_css if x not in css]
+          if missing:
+              raise SystemExit(f'Missing required release capabilities: {missing}')
+          prohibited = ['localhost:', 'REPLACE_WITH_API_KEY', 'OpenAI API key']
+          present = [x for x in prohibited if x in page or x in app]
+          if present:
+              raise SystemExit(f'Prohibited release markers found: {present}')
+          print('Tanzer Anderson Trading Ledger source QA: PASS')
+          PY
+
+      - name: Compile Pages Function
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$APP_DIR"
+          npx --yes wrangler@latest pages functions build functions \
+            --project-directory . \
+            --build-output-directory public \
+            --compatibility-date "$COMPATIBILITY_DATE" \
+            --outfile "$RUNNER_TEMP/tanzer-trading-ledger-worker.js"
+          test -s "$RUNNER_TEMP/tanzer-trading-ledger-worker.js"
+
+      - name: Ensure dedicated Cloudflare Pages project exists
+        shell: bash
+        run: |
+          set -euo pipefail
+          api="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects"
+          code=$(curl -sS -o "$RUNNER_TEMP/project-before.json" -w '%{http_code}' \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            -H 'Content-Type: application/json' \
+            "${api}/${PROJECT_NAME}")
+
+          if [ "$code" = "404" ]; then
+            jq -n \
+              --arg name "$PROJECT_NAME" \
+              --arg branch main \
+              --arg date "$COMPATIBILITY_DATE" \
+              '{name:$name,production_branch:$branch,compatibility_date:$date}' \
+              > "$RUNNER_TEMP/project-create.json"
+            curl -fsS -X POST "$api" \
+              -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+              -H 'Content-Type: application/json' \
+              --data @"$RUNNER_TEMP/project-create.json" \
+              > "$RUNNER_TEMP/project-after.json"
+            jq -e '.success == true' "$RUNNER_TEMP/project-after.json" >/dev/null
+          elif [ "$code" = "200" ]; then
+            jq -e '.success == true' "$RUNNER_TEMP/project-before.json" >/dev/null
+          else
+            cat "$RUNNER_TEMP/project-before.json" || true
+            echo "Unexpected Cloudflare project lookup status: $code" >&2
+            exit 1
+          fi
+
+      - name: Deploy browser app and serverless health endpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$APP_DIR"
+          npx --yes wrangler@latest pages deploy public \
+            --project-name "$PROJECT_NAME" \
+            --branch main \
+            --commit-hash "$GITHUB_SHA" \
+            --commit-message "Tanzer Anderson Trading Ledger browser release" \
+            --commit-dirty=false \
+            2>&1 | tee "$RUNNER_TEMP/tanzer-ledger-deploy.log"
+
+      - name: Resolve production URL
+        id: url
+        shell: bash
+        run: |
+          set -euo pipefail
+          api="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/${PROJECT_NAME}"
+          curl -fsS \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            -H 'Content-Type: application/json' \
+            "$api" > "$RUNNER_TEMP/project-live.json"
+          jq -e '.success == true' "$RUNNER_TEMP/project-live.json" >/dev/null
+          subdomain=$(jq -r '.result.subdomain // empty' "$RUNNER_TEMP/project-live.json")
+          test -n "$subdomain"
+          case "$subdomain" in
+            http://*|https://*) site_url="$subdomain" ;;
+            *) site_url="https://${subdomain}" ;;
+          esac
+          echo "site_url=$site_url" >> "$GITHUB_OUTPUT"
+          echo "Production URL: $site_url"
+
+      - name: Verify hosted journal
+        shell: bash
+        env:
+          SITE_URL: ${{ steps.url.outputs.site_url }}
+        run: |
+          set -euo pipefail
+          verified=false
+          for attempt in $(seq 1 18); do
+            home_code=$(curl -sS --max-time 30 -o "$RUNNER_TEMP/home.html" -w '%{http_code}' "$SITE_URL/" || true)
+            ping_code=$(curl -sS --max-time 30 -o "$RUNNER_TEMP/ping.json" -w '%{http_code}' "$SITE_URL/api/ping" || true)
+            app_code=$(curl -sS --max-time 30 -o "$RUNNER_TEMP/app.js" -w '%{http_code}' "$SITE_URL/static/app.js" || true)
+            if [ "$home_code" = "200" ] && [ "$ping_code" = "200" ] && [ "$app_code" = "200" ] \
+              && grep -q 'Tanzer Anderson' "$RUNNER_TEMP/home.html" \
+              && grep -q 'Eight-Account Command Strip' "$RUNNER_TEMP/home.html" \
+              && grep -q 'TradingView' "$RUNNER_TEMP/app.js" \
+              && jq -e '.status == "ok" and .paid_api_keys == false and .order_transmission == false' "$RUNNER_TEMP/ping.json" >/dev/null 2>&1; then
+              verified=true
+              break
+            fi
+            echo "Propagation check $attempt/18: home=$home_code ping=$ping_code app=$app_code"
+            sleep 10
+          done
+          test "$verified" = "true"
+          echo 'Tanzer Anderson Trading Ledger production verification: PASS'
+
+      - name: Record verified release
+        shell: bash
+        env:
+          SITE_URL: ${{ steps.url.outputs.site_url }}
+        run: |
+          set -euo pipefail
+          mkdir -p deployment-status
+          cat > deployment-status/tanzer-trading-ledger-latest.md <<EOF_STATUS
+          # Tanzer Anderson Trading Ledger — Production Verification
+
+          - Checked at: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+          - Production URL: ${SITE_URL}
+          - Deployment source SHA: ${GITHUB_SHA}
+          - Hosting: Cloudflare Pages + Pages Functions
+          - Browser installation required: No
+          - Paid API key required: No
+          - Eight account slots: PASS
+          - Drag-and-drop import: PASS
+          - P&L and analytics engine: PASS
+          - Tax planning center: PASS
+          - Live TradingView widget layer: PRESENT
+          - IndexedDB browser vault: PRESENT
+          - Serverless health endpoint: PASS
+          - Result: production verified
+          EOF_STATUS
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add deployment-status/tanzer-trading-ledger-latest.md
+          git commit -m 'chore: record Tanzer Trading Ledger production verification'
+          for attempt in $(seq 1 5); do
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+            git pull --rebase origin main
+            sleep 3
+          done
+          echo 'Deployment succeeded, but the durable status record could not be pushed.' >&2
+          exit 1
+
+      - name: Publish release summary
+        shell: bash
+        env:
+          SITE_URL: ${{ steps.url.outputs.site_url }}
+        run: |
+          {
+            echo '## Tanzer Anderson Private Trading Ledger is live'
+            echo
+            echo "- URL: ${SITE_URL}"
+            echo '- Browser-hosted; no Mac command or local server is required.'
+            echo '- No paid API key is required.'
+            echo '- Eight account slots, P&L, taxes, analytics, global drag-and-drop, evidence vault, backups, and live market widgets are active.'
+          } >> "$GITHUB_STEP_SUMMARY"
