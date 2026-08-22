@@ -1,0 +1,245 @@
+name: NQ Intelligence Firm - Weekday 6 AM Estimate
+
+run-name: >-
+  NQ Intelligence Firm / ${{ github.event_name }} /
+  ${{ github.event_name == 'schedule' && github.event.schedule || github.sha }}
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - cloud/nq-intelligence-firm-payload/**
+      - cloud/nq-intelligence-firm-release.sha256
+      - .github/workflows/nq-intelligence-firm.yml
+  workflow_dispatch:
+    inputs:
+      force_rebuild:
+        description: Rebuild the current local-date edition even if it already exists
+        required: false
+        default: true
+        type: boolean
+  schedule:
+    - cron: '43 5 * * 1-5'
+      timezone: 'America/Chicago'
+    - cron: '17 6 * * 1-5'
+      timezone: 'America/Chicago'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: nq-intelligence-firm-production
+  cancel-in-progress: false
+
+env:
+  APP_DIR: /tmp/nq-intelligence-firm
+  RELEASE_PAYLOAD_DIR: cloud/nq-intelligence-firm-payload
+  RELEASE_ARCHIVE: /tmp/nq-intelligence-firm-release.tgz
+  RELEASE_SHA: cloud/nq-intelligence-firm-release.sha256
+  PAGES_DIR: /tmp/nq-intelligence-gh-pages
+  ROUTE_DIR: /tmp/nq-intelligence-gh-pages/nq-intelligence
+  PRODUCTION_URL: https://hank475.github.io/tanzer-anderson-website/nq-intelligence
+  PYTHONUNBUFFERED: '1'
+  TZ: America/Chicago
+
+jobs:
+  build-publish-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+
+    steps:
+      - name: Checkout production source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify and reconstruct the immutable application release
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -d "$RELEASE_PAYLOAD_DIR"
+          test -n "$(find "$RELEASE_PAYLOAD_DIR" -maxdepth 1 -name 'part-*' -print -quit)"
+          test -s "$RELEASE_SHA"
+          cat "$RELEASE_PAYLOAD_DIR"/part-* | tr -d '\r\n' | base64 --decode > "$RELEASE_ARCHIVE"
+          test -s "$RELEASE_ARCHIVE"
+          expected=$(awk '{print $1}' "$RELEASE_SHA")
+          echo "$expected  $RELEASE_ARCHIVE" | sha256sum --check
+          rm -rf "$APP_DIR"
+          mkdir -p "$APP_DIR"
+          tar -xzf "$RELEASE_ARCHIVE" -C "$APP_DIR"
+          test -s "$APP_DIR/requirements.txt"
+          test -s "$APP_DIR/src/main.py"
+          test -s "$APP_DIR/tests/test_system.py"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install bounded dependencies
+        run: python -m pip install --disable-pip-version-check -r "$APP_DIR/requirements.txt"
+
+      - name: Run deterministic unit and document tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$APP_DIR"
+          PYTHONPATH=. pytest -q
+
+      - name: Prepare the existing GitHub Pages branch without disturbing other routes
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin gh-pages
+          rm -rf "$PAGES_DIR"
+          git worktree add -B nq-intelligence-publish "$PAGES_DIR" origin/gh-pages
+          mkdir -p "$ROUTE_DIR"
+          touch "$PAGES_DIR/.nojekyll"
+
+      - name: Determine whether this trigger should generate an edition
+        id: gate
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          FORCE_REBUILD: ${{ inputs.force_rebuild || 'false' }}
+        run: |
+          set -euo pipefail
+          today=$(date +%F)
+          should_run=true
+          reason='push/manual build'
+          if [ "$EVENT_NAME" = 'schedule' ] && [ -s "$ROUTE_DIR/data/latest.json" ]; then
+            existing=$(python - <<'PY'
+          import json, os
+          from pathlib import Path
+          path = Path(os.environ['ROUTE_DIR']) / 'data' / 'latest.json'
+          try:
+              print(json.loads(path.read_text()).get('meta', {}).get('report_date', ''))
+          except Exception:
+              print('')
+          PY
+            )
+            if [ "$existing" = "$today" ]; then
+              should_run=false
+              reason="current edition $today already published"
+            else
+              reason="scheduled edition missing for $today"
+            fi
+          fi
+          if [ "$EVENT_NAME" = 'workflow_dispatch' ] && [ "$FORCE_REBUILD" = 'true' ]; then
+            should_run=true
+            reason='manual force rebuild'
+          fi
+          echo "should_run=$should_run" >> "$GITHUB_OUTPUT"
+          echo "reason=$reason" >> "$GITHUB_OUTPUT"
+          echo "Gate: $should_run - $reason"
+
+      - name: Collect, analyze, generate exact two-page PDF, and render browser terminal
+        if: steps.gate.outputs.should_run == 'true'
+        env:
+          OUTPUT_DIR: ${{ env.ROUTE_DIR }}
+          BASE_URL: ${{ env.PRODUCTION_URL }}
+        run: |
+          set -euo pipefail
+          cd "$APP_DIR"
+          PYTHONPATH=. python -m src.main --output "$OUTPUT_DIR" --base-url "$BASE_URL"
+
+      - name: Consolidated artifact QA
+        if: steps.gate.outputs.should_run == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$ROUTE_DIR/index.html"
+          test -s "$ROUTE_DIR/latest.pdf"
+          test -s "$ROUTE_DIR/data/latest.json"
+          test -s "$ROUTE_DIR/data/archive.json"
+          test -s "$ROUTE_DIR/status.json"
+          grep -q 'NQ Intelligence Firm' "$ROUTE_DIR/index.html"
+          grep -q 'noindex,nofollow,noarchive' "$ROUTE_DIR/index.html"
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          from pypdf import PdfReader
+          root = Path(os.environ['ROUTE_DIR'])
+          status = json.loads((root / 'status.json').read_text())
+          latest = json.loads((root / 'data' / 'latest.json').read_text())
+          pdf = PdfReader(str(root / 'latest.pdf'))
+          assert len(pdf.pages) == 2, len(pdf.pages)
+          assert status['paid_api_keys'] == 0
+          assert sum(item['weight'] for item in latest['scenarios']) == 100
+          extracted = '\n'.join(page.extract_text() or '' for page in pdf.pages)
+          for marker in ('NQ INTELLIGENCE FIRM', 'CONDITIONAL SCENARIO', 'EVIDENCE LEDGER'):
+              assert marker in extracted, marker
+          assert len(extracted) > 2500, len(extracted)
+          print(json.dumps({'pages': 2, 'text_chars': len(extracted), 'pipeline': status['pipeline_state'], 'coverage': status['coverage_pct']}, indent=2))
+          PY
+          if command -v pdftoppm >/dev/null 2>&1; then
+            rm -rf /tmp/nq-pdf-renders && mkdir -p /tmp/nq-pdf-renders
+            pdftoppm -png -r 110 "$ROUTE_DIR/latest.pdf" /tmp/nq-pdf-renders/page >/dev/null
+            test "$(find /tmp/nq-pdf-renders -name 'page-*.png' | wc -l | tr -d ' ')" = '2'
+          fi
+
+      - name: Publish only the NQ route and preserve its archive
+        if: steps.gate.outputs.should_run == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$PAGES_DIR"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add nq-intelligence .nojekyll
+          if git diff --cached --quiet; then
+            echo 'No material change to publish.'
+            exit 0
+          fi
+          report_date=$(python - <<'PY'
+          import json, os
+          from pathlib import Path
+          print(json.loads((Path(os.environ['ROUTE_DIR'])/'status.json').read_text())['report_date'])
+          PY
+          )
+          git commit -m "publish: NQ intelligence estimate $report_date"
+          for attempt in 1 2 3 4; do
+            if git push origin HEAD:gh-pages; then
+              exit 0
+            fi
+            echo "Push race $attempt/4; rebasing on current gh-pages."
+            git fetch origin gh-pages
+            git rebase origin/gh-pages
+            sleep $((attempt * 2))
+          done
+          echo 'Unable to publish after four attempts.' >&2
+          exit 1
+
+      - name: Verify production route, current edition, and PDF availability
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected=$(date +%F)
+          verified=false
+          for attempt in $(seq 1 42); do
+            code=$(curl -sS -L -o /tmp/nq-home -w '%{http_code}' "$PRODUCTION_URL/?v=$GITHUB_SHA" || true)
+            status_code=$(curl -sS -L -o /tmp/nq-status -w '%{http_code}' "$PRODUCTION_URL/status.json?v=$GITHUB_SHA" || true)
+            pdf_code=$(curl -sS -L -o /tmp/nq-latest.pdf -w '%{http_code}' "$PRODUCTION_URL/latest.pdf?v=$GITHUB_SHA" || true)
+            report_date=$(python - <<'PY'
+          import json
+          try:
+              print(json.load(open('/tmp/nq-status')).get('report_date', ''))
+          except Exception:
+              print('')
+          PY
+            )
+            if [ "$code" = '200' ] && [ "$status_code" = '200' ] && [ "$pdf_code" = '200' ] \
+              && grep -q 'NQ Intelligence Firm' /tmp/nq-home \
+              && [ "$report_date" = "$expected" ]; then
+              verified=true
+              break
+            fi
+            echo "Production check $attempt/42: home=$code status=$status_code pdf=$pdf_code report=$report_date expected=$expected"
+            sleep 10
+          done
+          test "$verified" = 'true'
+          python - <<'PY'
+          from pypdf import PdfReader
+          assert len(PdfReader('/tmp/nq-latest.pdf').pages) == 2
+          print('NQ INTELLIGENCE FIRM: LIVE, CURRENT, AND EXACTLY TWO PAGES')
+          PY
