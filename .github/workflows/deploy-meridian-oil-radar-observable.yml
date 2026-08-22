@@ -1,0 +1,141 @@
+name: Deploy Meridian Oil Radar Observable
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - cloud/meridian-oil-radar-deploy-signal
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: meridian-oil-radar-production
+  cancel-in-progress: false
+
+env:
+  PROJECT_NAME: meridian-oil-radar
+  COMPATIBILITY_DATE: '2026-08-21'
+
+jobs:
+  deploy-and-observe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Reconstruct and validate release
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          APP_DIR="$RUNNER_TEMP/meridian-oil-radar"
+          ARCHIVE="$RUNNER_TEMP/meridian-oil-radar-release.tgz"
+          cat cloud/meridian-oil-radar-payload/part-* | tr -d '\r\n' | base64 --decode > "$ARCHIVE"
+          expected_sha=$(awk '{print $1}' cloud/meridian-oil-radar-release.sha256)
+          echo "$expected_sha  $ARCHIVE" | sha256sum --check
+          mkdir -p "$APP_DIR"
+          tar -xzf "$ARCHIVE" -C "$APP_DIR"
+          test -s "$APP_DIR/public/index.html"
+          test -s "$APP_DIR/public/static/app.js"
+          test -s "$APP_DIR/functions/api/[[path]].js"
+          node --check "$APP_DIR/public/static/app.js"
+          node --check "$APP_DIR/functions/api/[[path]].js"
+          echo "APP_DIR=$APP_DIR" >> "$GITHUB_ENV"
+          echo 'Release reconstruction and source validation: PASS'
+
+      - name: Ensure Cloudflare Pages project exists
+        shell: bash
+        run: |
+          set -euo pipefail
+          api="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects"
+          code=$(curl -sS -o "$RUNNER_TEMP/project.json" -w '%{http_code}' \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            -H 'Content-Type: application/json' \
+            "${api}/${PROJECT_NAME}")
+          if [ "$code" = "404" ]; then
+            jq -n --arg name "$PROJECT_NAME" --arg branch main --arg date "$COMPATIBILITY_DATE" \
+              '{name:$name,production_branch:$branch,compatibility_date:$date}' > "$RUNNER_TEMP/create.json"
+            curl -fsS -X POST "$api" \
+              -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+              -H 'Content-Type: application/json' \
+              --data @"$RUNNER_TEMP/create.json" > "$RUNNER_TEMP/project.json"
+          elif [ "$code" != "200" ]; then
+            cat "$RUNNER_TEMP/project.json" || true
+            exit 1
+          fi
+          jq -e '.success == true' "$RUNNER_TEMP/project.json" >/dev/null
+          echo 'Cloudflare Pages project: READY'
+
+      - name: Deploy browser application and API
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$APP_DIR"
+          npx --yes wrangler@latest pages deploy \
+            --project-name "$PROJECT_NAME" \
+            --branch main \
+            --commit-hash "$GITHUB_SHA" \
+            --commit-message "Meridian Oil Radar hosted browser release" \
+            2>&1 | tee "$RUNNER_TEMP/deploy.log"
+
+      - name: Resolve and verify public URL
+        id: verify
+        shell: bash
+        run: |
+          set -euo pipefail
+          api="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/${PROJECT_NAME}"
+          curl -fsS \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            -H 'Content-Type: application/json' \
+            "$api" > "$RUNNER_TEMP/live-project.json"
+          jq -e '.success == true' "$RUNNER_TEMP/live-project.json" >/dev/null
+          subdomain=$(jq -r '.result.subdomain // empty' "$RUNNER_TEMP/live-project.json")
+          test -n "$subdomain"
+          case "$subdomain" in
+            http://*|https://*) site_url="$subdomain" ;;
+            *) site_url="https://${subdomain}" ;;
+          esac
+
+          verified=false
+          for attempt in $(seq 1 18); do
+            home_code=$(curl -sS --max-time 30 -o "$RUNNER_TEMP/home.html" -w '%{http_code}' "$site_url/" || true)
+            ping_code=$(curl -sS --max-time 30 -o "$RUNNER_TEMP/ping.json" -w '%{http_code}' "$site_url/api/ping" || true)
+            if [ "$home_code" = "200" ] && [ "$ping_code" = "200" ] \
+              && grep -q 'Meridian Oil Radar' "$RUNNER_TEMP/home.html" \
+              && jq -e '.status == "ok" and .demo == false' "$RUNNER_TEMP/ping.json" >/dev/null 2>&1; then
+              verified=true
+              break
+            fi
+            echo "Verification attempt $attempt/18: home=$home_code ping=$ping_code"
+            sleep 10
+          done
+          test "$verified" = "true"
+          curl -fsS --max-time 90 "$site_url/api/news?timespan=24h&maxrecords=10" > "$RUNNER_TEMP/news.json"
+          jq -e '.demo == false and (.items | type == "array")' "$RUNNER_TEMP/news.json" >/dev/null
+          curl -fsS --max-time 90 "$site_url/api/market?days=30" > "$RUNNER_TEMP/market.json"
+          jq -e '.demo == false and (.instruments | type == "object")' "$RUNNER_TEMP/market.json" >/dev/null
+          echo "site_url=$site_url" >> "$GITHUB_OUTPUT"
+          echo "MERIDIAN_OIL_RADAR_URL=$site_url"
+          echo 'PUBLIC_BROWSER_AND_API_VERIFICATION=PASS'
+
+      - name: Publish observable deployment summary
+        shell: bash
+        env:
+          SITE_URL: ${{ steps.verify.outputs.site_url }}
+        run: |
+          echo "## Meridian Oil Radar deployment verified" >> "$GITHUB_STEP_SUMMARY"
+          echo "Public URL: ${SITE_URL}" >> "$GITHUB_STEP_SUMMARY"
+          echo 'No download, local server, or Mac application is required.' >> "$GITHUB_STEP_SUMMARY"
