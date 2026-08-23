@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#fcfbf7">
+  <meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
+  <meta name="description" content="Private NQ-first market intelligence command center with integrated oil intelligence radar.">
+  <title>NQ Intelligence Firm v2.0 — Private Command Center</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2245%22 fill=%22%23fcfbf7%22 stroke=%22%23ae8957%22 stroke-width=%224%22/><text x=%2250%22 y=%2262%22 text-anchor=%22middle%22 font-size=%2242%22 fill=%22%23292826%22>NQ</text></svg>">
+  <link rel="stylesheet" href="./assets/styles.css">
+</head>
+<body>
+  <div class="boot" id="boot">
+    <div class="boot-monogram">NQ</div>
+    <div class="eyebrow">PRIVATE INTELLIGENCE SURFACE</div>
+    <h1>NQ Intelligence Firm</h1>
+    <p>Establishing the evidence bus and opening the command center.</p>
+    <div class="boot-rule"><i></i></div>
+  </div>
+
+  <div class="app" id="app" aria-hidden="true">
+    <header class="topbar">
+      <button class="mobile-menu" id="mobileMenu" aria-label="Open navigation">☰</button>
+      <div class="brand">
+        <div class="brand-mark">NQ</div>
+        <div>
+          <strong>NQ Intelligence Firm <small>v2.0</small></strong>
+          <span>PRIVATE EDITORIAL COMMAND CENTER</span>
+        </div>
+      </div>
+
+      <button class="command-button" id="commandButton" aria-label="Open command palette">
+        <span>Search intelligence or run a command</span><kbd>Ctrl K</kbd>
+      </button>
+
+      <div class="top-status">
+        <div class="status-cell">
+          <span class="status-dot" id="dataDot"></span>
+          <b id="dataState">CONNECTING</b>
+          <small>DATA BUS</small>
+        </div>
+        <div class="status-cell">
+          <b id="clock">--:--:--</b>
+          <small>CHICAGO</small>
+        </div>
+        <button class="quiet-button" id="focusMode" title="Focus mode">FOCUS</button>
+        <button class="gold-button" id="refreshAll">REFRESH</button>
+      </div>
+    </header>
+
+    <div class="capability-strip">
+      <span>20 HIGH-VALUE ENHANCEMENTS</span>
+      <i></i><span>LIQUIDITY ATLAS</span>
+      <i></i><span>TRENDLINE INTELLIGENCE</span>
+      <i></i><span>INDEPENDENTLY SCHEDULED</span>
+      <i></i><span>INTERNET-CONNECTED</span>
+      <i></i><span>NO PAID DATA API</span>
+    </div>
+
+    <aside class="sidebar" id="sidebar">
+      <nav class="navigation" aria-label="Primary">
+        <button class="nav-item active" data-view="command"><em>01</em><span>Command Center</span></button>
+        <button class="nav-item" data-view="nq-radar"><em>02</em><span>NQ Radar</span></button>
+        <button class="nav-item" data-view="liquidity"><em>03</em><span>Liquidity Atlas</span></button>
+        <button class="nav-item" data-view="trendlines"><em>04</em><span>Trendline Intelligence</span></button>
+        <button class="nav-item" data-view="oil"><em>05</em><span>Oil Intelligence Radar</span><b id="oilCount">0</b></button>
+        <button class="nav-item" data-view="decision"><em>06</em><span>Decision Lab</span></button>
+        <button class="nav-item" data-view="predictions"><em>07</em><span>Prediction Ledger</span></button>
+        <button class="nav-item" data-view="alerts"><em>08</em><span>Alerts</span><b id="alertCount">0</b></button>
+        <button class="nav-item" data-view="settings"><em>09</em><span>Sources & Settings</span></button>
+      </nav>
+
+      <section class="watchlist">
+        <div class="side-title"><span>WATCHLIST</span><small>PUBLIC / DELAYED</small></div>
+        <div id="watchlistRows" class="watchlist-rows"><div class="skeleton-row"></div><div class="skeleton-row"></div><div class="skeleton-row"></div></div>
+      </section>
+
+      <div class="side-footer">
+        <div><span id="sourceMiniDot" class="status-dot"></span><small>SOURCE HEALTH</small><strong id="sourceMini">—</strong></div>
+        <div><small>LAST UPDATE</small><strong id="lastUpdateMini">—</strong></div>
+        <a href="./logout" id="logoutLink">SIGN OUT</a>
+      </div>
+    </aside>
+
+    <main class="workspace">
+      <div class="global-warning hidden" id="globalWarning"></div>
+
+      <section class="view active" id="view-command">
+        <div class="view-head">
+          <div>
+            <div class="eyebrow">NQ PRIMARY · OIL CONTEXTUAL</div>
+            <h1>Intelligence without noise.</h1>
+            <p>NQ structure, liquidity, trend quality, cross-market pressure and global oil risk in one private operating surface.</p>
+          </div>
+          <div class="head-actions">
+            <button class="quiet-button" data-export="snapshot">EXPORT SNAPSHOT</button>
+            <button class="gold-button" data-jump="nq-radar">OPEN NQ RADAR</button>
+          </div>
+        </div>
+
+        <section class="panel hero-panel">
+          <div class="panel-label">NQ PRIMARY OVERVIEW</div>
+          <div class="hero-grid">
+            <div class="quote-hero">
+              <div class="instrument-line"><strong>NQ1!</strong><span>Nasdaq-100 E-mini</span><em id="nqLatency">DELAYED</em></div>
+              <div class="quote-line"><b id="nqPrice">—</b><small>USD</small></div>
+              <div class="quote-change" id="nqChange">Awaiting market observation</div>
+              <svg id="nqHeroSpark" class="spark hero-spark" viewBox="0 0 320 72" aria-label="NQ recent price history"></svg>
+              <div class="range-chips"><button class="active">1D</button><button>5D</button><button>1M</button><button>3M</button><button>YTD</button></div>
+            </div>
+            <div class="hero-metric">
+              <span>REGIME</span>
+              <div class="radial-icon" id="regimeIcon"></div>
+              <strong id="regimeName">—</strong>
+              <small id="regimeDetail">Awaiting structure</small>
+            </div>
+            <div class="hero-metric">
+              <span>BIAS</span>
+              <div class="bias-icon" id="biasIcon">↗</div>
+              <strong id="biasName">—</strong>
+              <small id="biasDetail">Evidence pending</small>
+            </div>
+            <div class="hero-metric">
+              <span>RISK TONE</span>
+              <div class="gauge"><i id="riskGauge"></i></div>
+              <strong id="riskName">—</strong>
+              <small id="riskDetail">Public data context</small>
+            </div>
+            <div class="top-signals">
+              <span>TOP SIGNALS</span>
+              <div id="topSignals"><div class="signal-row"><i></i><b>Loading evidence</b><em>—</em></div></div>
+            </div>
+          </div>
+        </section>
+
+        <div class="command-layout">
+          <section class="panel chart-panel">
+            <div class="panel-head">
+              <div><div class="panel-label">NQ INTELLIGENCE SUITE</div><h2>Structure & execution map</h2></div>
+              <div class="tabs" id="chartTabs"><button class="active" data-mode="structure">Structure</button><button data-mode="liquidity">Liquidity</button><button data-mode="trend">Trendlines</button></div>
+            </div>
+            <div class="chart-shell">
+              <svg id="nqMainChart" class="main-chart" viewBox="0 0 900 420" aria-label="NQ market chart"></svg>
+              <div class="chart-empty hidden" id="nqChartEmpty">Intraday series unavailable. Confirm levels remain visible; no replacement series has been fabricated.</div>
+            </div>
+            <div class="chart-footer"><span id="chartAsOf">AS OF —</span><span>PUBLIC DELAYED / INDICATIVE · VERIFY WITH TRADING VENUE</span></div>
+          </section>
+
+          <section class="panel compact-panel">
+            <div class="panel-head"><div><div class="panel-label">LIQUIDITY ATLAS</div><h2>Mapped pools</h2></div><button class="text-link" data-jump="liquidity">OPEN →</button></div>
+            <div id="liquidityProfile" class="liquidity-profile"></div>
+            <div class="profile-legend"><span>LOW</span><i></i><span>HIGH</span></div>
+          </section>
+
+          <section class="panel compact-panel">
+            <div class="panel-head"><div><div class="panel-label">TRENDLINE INTELLIGENCE</div><h2>Multi-timeframe</h2></div><button class="text-link" data-jump="trendlines">OPEN →</button></div>
+            <svg id="trendMini" class="mini-chart" viewBox="0 0 360 180"></svg>
+            <div id="trendSummary" class="metric-list"></div>
+          </section>
+
+          <section class="panel oil-card">
+            <div class="panel-head"><div><div class="panel-label">OIL INTELLIGENCE RADAR</div><h2>Global risk transmission</h2></div><button class="text-link" data-jump="oil">FULL RADAR →</button></div>
+            <svg id="oilMiniRadar" class="oil-radar mini" viewBox="0 0 480 480" aria-label="Global oil intelligence radar"></svg>
+            <div class="oil-caption"><strong id="oilPressureMini">Oil pressure —</strong><span>Demand · Supply · Flows · Geopolitics · Macro</span></div>
+          </section>
+        </div>
+
+        <div class="bottom-grid">
+          <section class="panel"><div class="panel-head"><div><div class="panel-label">MARKET KPIs</div><h2>Cross-market pulse</h2></div></div><div id="marketKpis" class="kpi-grid"></div></section>
+          <section class="panel"><div class="panel-head"><div><div class="panel-label">RANKED INTELLIGENCE</div><h2>Highest-value evidence</h2></div></div><div id="rankedIntelligence" class="ranked-list"></div></section>
+          <section class="panel"><div class="panel-head"><div><div class="panel-label">DECISION LAB PRESETS</div><h2>Structured scenarios</h2></div><button class="text-link" data-jump="decision">OPEN →</button></div><div class="preset-list"><button data-preset="continuation"><b>Momentum continuation</b><span>Trend + liquidity alignment</span><em>HIGH CONVICTION</em></button><button data-preset="reversal"><b>Liquidity reversal</b><span>Sweep + reclaim requirement</span><em>CONDITIONAL</em></button><button data-preset="riskoff"><b>Oil-led risk-off</b><span>Energy shock transmission</span><em>MACRO</em></button></div></section>
+          <section class="panel"><div class="panel-head"><div><div class="panel-label">PUBLICATION & STATUS</div><h2>Independent operation</h2></div></div><div class="status-list"><div><span>Application</span><b>Private web-based</b></div><div><span>Schedule</span><b>Independently scheduled</b></div><div><span>Connection</span><b id="publicationConnection">Checking</b></div><div><span>NQ source</span><b id="nqSourceTime">—</b></div><div><span>Oil source</span><b id="oilSourceTime">—</b></div><div><span>Paid API requirement</span><b>None</b></div></div></section>
+        </div>
+      </section>
+
+      <section class="view" id="view-nq-radar">
+        <div class="view-head"><div><div class="eyebrow">NQ PRIMARY INTELLIGENCE</div><h1>NQ Radar</h1><p>A polar evidence map of price location, liquidity proximity, trend alignment, volatility and breadth.</p></div><div class="head-actions"><button class="quiet-button" id="nqRadarFull">FULLSCREEN</button></div></div>
+        <div class="radar-view-grid"><section class="panel large-radar-panel"><div class="radar-toolbar"><div class="filter-group"><label>TIMEFRAME</label><select id="nqRadarTf"><option>5m</option><option selected>15m</option><option>1h</option><option>4h</option></select></div><div class="filter-group"><label>MIN CONFIDENCE</label><input id="nqConfidence" type="range" min="0" max="100" value="50"><output id="nqConfidenceOut">50%</output></div><div class="radar-live"><span class="pulse"></span><b>STRUCTURE SCAN</b><small id="nqRadarAsOf">—</small></div></div><svg id="nqRadar" class="nq-radar" viewBox="0 0 820 680" aria-label="NQ intelligence radar"></svg></section><aside class="panel evidence-panel"><div class="panel-label">SELECTED EVIDENCE</div><div id="nqEvidenceDetail" class="evidence-detail"><h2>Evidence map</h2><p>Select a radar node to inspect the underlying observation, source timestamp and execution implication.</p></div><div class="divider"></div><div class="panel-label">TRADE PERMISSION</div><div id="tradePermission" class="permission-card"></div></aside></div>
+      </section>
+
+      <section class="view" id="view-liquidity"><div class="view-head"><div><div class="eyebrow">DEDICATED INTELLIGENCE SECTION</div><h1>Liquidity Atlas</h1><p>Observed NQ liquidity pools, VWAP inventory, auction profile, fair-value gaps and mapped sweep states.</p></div><div class="head-actions"><button class="quiet-button" data-export="liquidity">EXPORT LEVELS</button></div></div><div class="atlas-grid"><section class="panel atlas-map"><div class="panel-head"><div><div class="panel-label">VERTICAL PRICE ATLAS</div><h2 id="atlasInstrument">NQ1! · Current session</h2></div><div class="asof" id="atlasAsOf">—</div></div><div id="verticalAtlas" class="vertical-atlas"></div></section><section class="panel"><div class="panel-label">AUCTION PROFILE</div><div id="profileMetrics" class="big-metrics"></div><svg id="profileChart" class="profile-chart" viewBox="0 0 440 360"></svg></section><section class="panel"><div class="panel-label">SWEEPS & RECLAIMS</div><div id="sweepList" class="event-list"></div></section><section class="panel"><div class="panel-label">FAIR-VALUE GAPS</div><div id="fvgList" class="event-list"></div></section></div></section>
+
+      <section class="view" id="view-trendlines"><div class="view-head"><div><div class="eyebrow">DEDICATED INTELLIGENCE SECTION</div><h1>Trendline Intelligence</h1><p>Multi-timeframe channel state, slope, quality, break tests and confluence—without decorative lines.</p></div></div><div id="trendCards" class="trend-card-grid"></div><section class="panel trend-deep"><div class="panel-head"><div><div class="panel-label">CONFLUENCE MAP</div><h2>Structure agreement by timeframe</h2></div><div id="trendConfluenceBadge" class="score-badge">—</div></div><svg id="trendDeepChart" class="deep-chart" viewBox="0 0 1100 480"></svg><div id="trendNarrative" class="editorial-note"></div></section></section>
+
+      <section class="view" id="view-oil"><div class="view-head"><div><div class="eyebrow">INTEGRATED SUPPORTING INTELLIGENCE</div><h1>Oil Intelligence Radar</h1><p>Global supply, demand, shipping, geopolitical and inventory events—ranked by estimated impact and confidence.</p></div><div class="head-actions"><button class="quiet-button" data-export="oil-news">EXPORT NEWS</button><button class="gold-button" id="oilRadarFull">FULLSCREEN</button></div></div><div class="oil-view-grid"><section class="panel large-radar-panel"><div class="radar-toolbar"><div class="filter-group"><label>CATEGORY</label><select id="oilCategory"><option value="all">All intelligence</option></select></div><div class="filter-group"><label>DIRECTION</label><select id="oilDirection"><option value="all">All directions</option><option value="bullish">Bullish pressure</option><option value="bearish">Bearish pressure</option><option value="mixed">Mixed</option></select></div><div class="filter-group"><label>MIN IMPACT</label><input id="oilImpact" type="range" min="0" max="100" value="45"><output id="oilImpactOut">45</output></div><div class="radar-live"><span class="pulse"></span><b>GLOBAL SCAN</b><small id="oilRadarAsOf">—</small></div></div><svg id="oilRadar" class="oil-radar full" viewBox="0 0 900 680" aria-label="Global oil intelligence radar"></svg></section><aside class="panel evidence-panel"><div class="panel-label">OIL PRESSURE INDEX</div><div class="pressure-readout"><strong id="oilPressureScore">—</strong><span id="oilPressureLabel">Awaiting inputs</span><div class="pressure-meter"><i id="oilPressureBar"></i></div></div><div id="oilPressureComponents" class="component-list"></div><div class="divider"></div><div class="panel-label">SELECTED EVENT</div><div id="oilEvidenceDetail" class="evidence-detail"><h2>Global evidence map</h2><p>Select a radar node to inspect its headline, source, inferred location and oil-market relevance.</p></div></aside></div><section class="panel news-panel"><div class="panel-head"><div><div class="panel-label">NEWS INTELLIGENCE</div><h2>Ranked evidence feed</h2></div><div class="search-sort"><input id="oilNewsSearch" placeholder="Search oil intelligence"><select id="oilNewsSort"><option value="impact">Highest impact</option><option value="latest">Latest</option><option value="confidence">Highest confidence</option></select></div></div><div id="oilNewsTable" class="news-table"></div></section></section>
+
+      <section class="view" id="view-decision"><div class="view-head"><div><div class="eyebrow">RULE-BASED SCENARIO ANALYSIS</div><h1>Decision Lab</h1><p>Interrogate conditions and dependencies. Outputs are scenario estimates, not price forecasts or trade instructions.</p></div></div><div class="decision-grid"><section class="panel"><div class="panel-label">SCENARIO BUILDER</div><div class="scenario-presets" id="scenarioPresets"><button class="active" data-scenario="continuation">Momentum continuation</button><button data-scenario="reversal">Liquidity reversal</button><button data-scenario="oilshock">Oil shock / risk-off</button><button data-scenario="event">Tier-1 event volatility</button></div><div class="scenario-controls"><label>Trend alignment <input id="scTrend" type="range" min="-100" max="100" value="45"><output>45</output></label><label>Liquidity confirmation <input id="scLiquidity" type="range" min="-100" max="100" value="35"><output>35</output></label><label>Breadth confirmation <input id="scBreadth" type="range" min="-100" max="100" value="20"><output>20</output></label><label>Oil / macro pressure <input id="scOil" type="range" min="-100" max="100" value="0"><output>0</output></label><label>Volatility constraint <input id="scVol" type="range" min="0" max="100" value="25"><output>25</output></label></div><button class="gold-button wide" id="saveScenario">SAVE SCENARIO</button></section><section class="panel scenario-result"><div class="panel-label">MODELED READ</div><div class="scenario-score"><strong id="scenarioScore">—</strong><span id="scenarioLabel">Adjust assumptions</span></div><div class="scenario-range"><div><small>BEAR CASE</small><b id="bearCase">—</b></div><div><small>BASE CASE</small><b id="baseCase">—</b></div><div><small>BULL CASE</small><b id="bullCase">—</b></div></div><div id="scenarioDependencies" class="dependency-list"></div><div class="editorial-note">The model is directional and conditional. It does not estimate a guaranteed NQ target and does not replace venue data, risk limits or judgment.</div></section><section class="panel"><div class="panel-head"><div><div class="panel-label">SAVED SCENARIOS</div><h2>Local decision record</h2></div></div><div id="savedScenarios" class="saved-list"></div></section></div></section>
+
+      <section class="view" id="view-predictions"><div class="view-head"><div><div class="eyebrow">CALIBRATION OVER CONVICTION</div><h1>Prediction Ledger</h1><p>Record probabilities before outcomes, resolve them honestly and monitor calibration through Brier scoring.</p></div><div class="head-actions"><button class="quiet-button" data-export="predictions">EXPORT LEDGER</button></div></div><div class="ledger-grid"><section class="panel"><div class="panel-label">NEW PREDICTION</div><form id="predictionForm" class="form-stack"><label>Prediction <textarea id="predictionText" required placeholder="Example: NQ closes above session VWAP"></textarea></label><div class="form-row"><label>Probability <input id="predictionProbability" type="number" min="1" max="99" value="60" required></label><label>Horizon <input id="predictionHorizon" type="datetime-local" required></label></div><label>Evidence / thesis <textarea id="predictionThesis" placeholder="What observable evidence supports this probability?"></textarea></label><button class="gold-button wide" type="submit">ADD TO LEDGER</button></form></section><section class="panel calibration-panel"><div class="panel-label">CALIBRATION</div><div class="calibration-stats"><div><strong id="predictionOpen">0</strong><span>OPEN</span></div><div><strong id="predictionResolved">0</strong><span>RESOLVED</span></div><div><strong id="brierScore">—</strong><span>BRIER SCORE</span></div></div><svg id="calibrationChart" class="calibration-chart" viewBox="0 0 560 260"></svg></section></div><section class="panel"><div class="panel-head"><div><div class="panel-label">LEDGER</div><h2>Predictions and outcomes</h2></div><select id="predictionFilter"><option value="all">All</option><option value="open">Open</option><option value="resolved">Resolved</option></select></div><div id="predictionTable" class="ledger-table"></div></section></section>
+
+      <section class="view" id="view-alerts"><div class="view-head"><div><div class="eyebrow">EVIDENCE-BASED NOTIFICATIONS</div><h1>Alerts</h1><p>Create local rules for NQ price, oil pressure, headline impact, source failures and liquidity proximity.</p></div><div class="head-actions"><button class="quiet-button" id="notificationPermission">ENABLE BROWSER NOTIFICATIONS</button></div></div><div class="alerts-grid"><section class="panel"><div class="panel-label">NEW RULE</div><form id="alertForm" class="form-stack"><label>Rule type <select id="alertType"><option value="nq_above">NQ above level</option><option value="nq_below">NQ below level</option><option value="oil_pressure_above">Oil pressure above</option><option value="oil_impact_above">Oil news impact above</option><option value="keyword">Oil-news keyword</option><option value="source_failure">Any source failure</option></select></label><label id="alertValueWrap">Threshold / keyword <input id="alertValue" required placeholder="Example: 29470.25"></label><label>Rule name <input id="alertName" required placeholder="Previous-high reclaim"></label><button class="gold-button wide" type="submit">ADD ALERT</button></form></section><section class="panel"><div class="panel-label">ACTIVE RULES</div><div id="alertRules" class="rule-list"></div></section><section class="panel"><div class="panel-label">ALERT HISTORY</div><div id="alertHistory" class="history-list"></div></section></div></section>
+
+      <section class="view" id="view-settings"><div class="view-head"><div><div class="eyebrow">PROVENANCE, CONTROLS & OPERATING STANDARD</div><h1>Sources & Settings</h1><p>Exact timestamps, latency labels, source condition, local preferences and the twenty-module intelligence framework.</p></div></div><div class="settings-grid"><section class="panel"><div class="panel-label">OPERATING SETTINGS</div><div class="setting-list"><label><span>Automatic refresh</span><input id="settingAutoRefresh" type="checkbox" checked></label><label><span>Compact information density</span><input id="settingCompact" type="checkbox"></label><label><span>Quiet focus mode</span><input id="settingFocus" type="checkbox"></label><label><span>Browser notifications</span><input id="settingNotifications" type="checkbox"></label></div><div class="button-row"><button class="quiet-button" id="clearLocalData">CLEAR LOCAL RECORDS</button><button class="quiet-button" data-export="all">EXPORT ALL LOCAL DATA</button></div></section><section class="panel"><div class="panel-label">DATA PROVENANCE</div><div id="sourceHealthTable" class="source-table"></div></section><section class="panel enhancements-panel"><div class="panel-label">TWENTY HIGH-VALUE ENHANCEMENTS</div><div id="enhancementGrid" class="enhancement-grid"></div></section><section class="panel"><div class="panel-label">INTEGRITY BOUNDARY</div><div class="editorial-note large"><p><strong>No synthetic replacement values.</strong> A failed or stale provider remains visible as unavailable, partial or stale.</p><p>NQ prices are public delayed or indicative observations unless a licensed venue feed is connected. Oil news impact, direction and location are transparent rules-based classifications. All market decisions remain the operator’s responsibility.</p><p>This page is protected at the server boundary. Signing out closes the current browser-authenticated session.</p></div></section></div></section>
+    </main>
+
+    <footer><span>NQ Intelligence Firm v2.0</span><i></i><span>Editorial Command Center</span><i></i><span>NQ Primary · Oil Contextual</span><strong id="footerTime">LAST UPDATED —</strong></footer>
+  </div>
+
+  <div class="command-modal hidden" id="commandModal" role="dialog" aria-modal="true" aria-label="Command palette"><div class="command-box"><div class="command-input"><span>⌘</span><input id="commandInput" autocomplete="off" placeholder="Try: oil Iran, show liquidity, NQ radar, source health"><kbd>ESC</kbd></div><div id="commandResults" class="command-results"></div><div class="command-help">Navigate views, search oil intelligence, open evidence and export records.</div></div></div>
+  <div class="toast-stack" id="toastStack" aria-live="polite"></div>
+  <script src="./assets/app.js"></script>
+</body>
+</html>
