@@ -1,0 +1,19 @@
+name: Trigger Tanzer Trading Ledger production verification
+
+on:
+  schedule:
+    - cron: '10 0 * * *'
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch the hosted release verifier
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run verify-tanzer-trading-journal-github-pages.yml --ref main
