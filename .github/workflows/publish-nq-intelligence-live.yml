@@ -20,6 +20,10 @@ concurrency:
   group: nq-intelligence-live
   cancel-in-progress: true
 
+env:
+  UI_SOURCE_SHA256: 2b675fe9a821a0f5d9b5c4dd2d9f32ed1195afd540f5686ed010d66eb203bb1e
+  UI_ARCHIVE_SHA256: fe7ff20e65cc49de8f84580d9ff6bd34113c8cb8fbc045f9a2cd3ff804b775f9
+
 jobs:
   publish:
     runs-on: ubuntu-latest
@@ -49,6 +53,41 @@ jobs:
           grep -q '%PDF-1.4' /tmp/nq-build/reports/latest.pdf
           grep -q '"mode": "LIVE_PUBLIC"' /tmp/nq-build/data/latest.json
 
+      - name: Reconstruct and validate quiet-luxury command center
+        shell: bash
+        run: |
+          set -euo pipefail
+          bundle='cloud/nq-intelligence/public-v2-bundle'
+          test -s "$bundle/part-00.b64"
+          test -s "$bundle/part-01.b64"
+          test -s "$bundle/part-02.b64"
+          cat "$bundle"/part-*.b64 | tr -d '\r\n' | base64 --decode > /tmp/nq-build/nq-ui.html.gz
+          echo "${UI_ARCHIVE_SHA256}  /tmp/nq-build/nq-ui.html.gz" | sha256sum --check
+          gzip -dc /tmp/nq-build/nq-ui.html.gz > /tmp/nq-build/index.html
+          echo "${UI_SOURCE_SHA256}  /tmp/nq-build/index.html" | sha256sum --check
+          test -s /tmp/nq-build/index.html
+          for marker in \
+            'NQ Intelligence Firm' \
+            'Liquidity Atlas' \
+            'Trendline Intelligence' \
+            'Oil Intelligence Radar' \
+            'TWENTY HIGH-VALUE ENHANCEMENTS' \
+            '../oil-radar/api/snapshot.json' \
+            'reports/latest.pdf'; do
+            grep -q "$marker" /tmp/nq-build/index.html
+          done
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          page = Path('/tmp/nq-build/index.html').read_text(encoding='utf-8')
+          scripts = re.findall(r'<script(?:\s[^>]*)?>([\s\S]*?)</script>', page, flags=re.I)
+          if len(scripts) != 1:
+              raise SystemExit(f'Expected one application script, found {len(scripts)}')
+          Path('/tmp/nq-build/app.js').write_text(scripts[0], encoding='utf-8')
+          PY
+          node --check /tmp/nq-build/app.js
+          echo 'NQ QUIET-LUXURY UNIFIED UI: SOURCE QA PASS'
+
       - name: Publish beneath the existing GitHub Pages site
         shell: bash
         run: |
@@ -58,7 +97,7 @@ jobs:
           git worktree add /tmp/nq-gh-pages origin/gh-pages
           target=/tmp/nq-gh-pages/nq-intelligence
           mkdir -p "$target/assets" "$target/data" "$target/reports/archive"
-          cp cloud/nq-intelligence/public/index.html "$target/index.html"
+          cp /tmp/nq-build/index.html "$target/index.html"
           cp /tmp/nq-build/data/latest.json "$target/data/latest.json"
           cp /tmp/nq-build/reports/latest.pdf "$target/reports/latest.pdf"
           touch /tmp/nq-gh-pages/.nojekyll
@@ -72,45 +111,67 @@ jobs:
             fi
           fi
           python - <<'PY'
-          import json, pathlib
+          import json, os, pathlib
           data=json.loads(pathlib.Path('/tmp/nq-build/data/latest.json').read_text())
-          status={'status':'published','mode':data['meta']['mode'],'generated_at_utc':data['meta']['generated_at_utc'],'content_sha256':data['meta']['content_sha256'],'healthy_sources':data['data_quality']['healthy_sources'],'total_sources':data['data_quality']['total_sources'],'market_data_class':data['meta']['market_data_class']}
+          status={
+            'status':'published',
+            'mode':data['meta']['mode'],
+            'generated_at_utc':data['meta']['generated_at_utc'],
+            'content_sha256':data['meta']['content_sha256'],
+            'ui_sha256':os.environ['UI_SOURCE_SHA256'],
+            'healthy_sources':data['data_quality']['healthy_sources'],
+            'total_sources':data['data_quality']['total_sources'],
+            'market_data_class':data['meta']['market_data_class'],
+            'primary_instrument':'NQ',
+            'oil_radar_retained':True,
+            'appearance':'light ultra-quiet luxury'
+          }
           pathlib.Path('/tmp/nq-gh-pages/nq-intelligence/status.json').write_text(json.dumps(status,indent=2)+'\n')
           PY
           cd /tmp/nq-gh-pages
           git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git config user.email '4189826+github-actions[bot]@users.noreply.github.com'
           git add nq-intelligence .nojekyll
           if ! git diff --cached --quiet; then
-            git commit -m "publish: refresh NQ Intelligence live desk ${local_stamp} CT"
+            git commit -m "publish: refresh unified NQ intelligence desk ${local_stamp} CT"
+            pushed=false
             for attempt in $(seq 1 5); do
               if git push origin HEAD:gh-pages; then
+                pushed=true
                 break
               fi
               git pull --rebase origin gh-pages
               sleep 3
             done
+            test "$pushed" = true
           fi
 
-      - name: Verify public browser application and data
+      - name: Verify public browser application, NQ data, oil radar and report
         shell: bash
         run: |
           set -euo pipefail
           url='https://hank475.github.io/tanzer-anderson-website/nq-intelligence/'
+          oil_url='https://hank475.github.io/tanzer-anderson-website/oil-radar/api/snapshot.json'
           ok=false
           for attempt in $(seq 1 36); do
             page=$(curl -sS -L --max-time 30 -o /tmp/nq-home -w '%{http_code}' "$url" || true)
             data=$(curl -sS -L --max-time 30 -o /tmp/nq-data -w '%{http_code}' "${url}data/latest.json" || true)
             report=$(curl -sS -L --max-time 30 -o /tmp/nq-report -w '%{http_code}' "${url}reports/latest.pdf" || true)
-            if [ "$page" = "200" ] && [ "$data" = "200" ] && [ "$report" = "200" ] \
+            oil=$(curl -sS -L --max-time 45 -o /tmp/oil-data -w '%{http_code}' "$oil_url" || true)
+            if [ "$page" = "200" ] && [ "$data" = "200" ] && [ "$report" = "200" ] && [ "$oil" = "200" ] \
               && grep -q 'NQ Intelligence Firm' /tmp/nq-home \
+              && grep -q 'Liquidity Atlas' /tmp/nq-home \
+              && grep -q 'Trendline Intelligence' /tmp/nq-home \
+              && grep -q 'Oil Intelligence Radar' /tmp/nq-home \
+              && grep -q 'TWENTY HIGH-VALUE ENHANCEMENTS' /tmp/nq-home \
               && jq -e '.meta.mode == "LIVE_PUBLIC" and .meta.internet_connected == true' /tmp/nq-data >/dev/null \
+              && jq -e '.demo == false and (.news.items | type == "array") and (.market.instruments | type == "object")' /tmp/oil-data >/dev/null \
               && grep -q '%PDF-1.4' /tmp/nq-report; then
               ok=true
               break
             fi
-            echo "Verification ${attempt}/36: page=${page}, data=${data}, report=${report}"
+            echo "Verification ${attempt}/36: page=${page}, data=${data}, report=${report}, oil=${oil}"
             sleep 10
           done
           test "$ok" = true
-          echo 'NQ INTELLIGENCE LIVE: VERIFIED'
+          echo 'NQ INTELLIGENCE UNIFIED LIVE: VERIFIED'
