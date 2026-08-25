@@ -3,28 +3,28 @@
     "product": "NQ Intelligence Firm",
     "version": "2.0.0",
     "mode": "LIVE_PUBLIC",
-    "generated_at_utc": "2026-08-25T03:16:21.368901Z",
-    "generated_at_ct": "Monday, August 24, 2026 \u00b7 10:16 PM CT",
+    "generated_at_utc": "2026-08-25T05:08:50.050229Z",
+    "generated_at_ct": "Tuesday, August 25, 2026 \u00b7 12:08 AM CT",
     "refresh_target_seconds": 300,
     "internet_connected": true,
     "market_data_class": "public delayed or indicative; not exchange-licensed tick real-time",
     "official_release_class": "internet-live when source is reachable",
     "disclosure": "Public-source decision support only. Verify prices with the trading venue before acting.",
-    "content_sha256": "2856b402af506ee95f023ded587a7acdc9ee58c4b74e47d0fa3b080812efc09e"
+    "content_sha256": "ccee4eebe78bcf44df989e3ff5a64e094df28fc72c6ab9841763094263a71d29"
   },
   "director": {
-    "bias": "defensive",
-    "score": -0.681,
-    "confidence": 0.78,
+    "bias": "neutral / conditional",
+    "score": 0.0,
+    "confidence": 0.44,
     "regime": {
       "name": "two-way-auction",
-      "structure": "directional",
+      "structure": "balanced",
       "volatility": "normal-volatility",
-      "confidence": 0.74
+      "confidence": 0.48
     },
-    "assessment": "The conditional posture is defensive. The tape is classified as two-way-auction, with bearish alignment and session inventory above vwap. 5 of 8 tracked megacaps are advancing. Priority is confirmation at mapped liquidity rather than prediction between levels.",
+    "assessment": "The conditional posture is neutral / conditional. The tape is classified as two-way-auction, with mixed structure and session inventory unknown. 0 of 0 tracked megacaps are advancing. Priority is confirmation at mapped liquidity rather than prediction between levels.",
     "trade_permission": {
-      "state": "CONDITIONAL",
+      "state": "RESTRICTED",
       "blockers": [],
       "required_confirmations": [
         "price acceptance beyond a mapped liquidity pool",
@@ -36,431 +36,108 @@
   },
   "quotes": {
     "NQ": {
-      "status": "available",
-      "price": 29127.75,
-      "change": -385.0,
-      "change_pct": -1.305,
-      "as_of": "2026-08-25T03:06:19Z",
-      "freshness_seconds": 602,
-      "latency_class": "public-delayed-or-indicative",
-      "source": "Yahoo Finance public chart",
-      "exchange": "CME"
+      "status": "unavailable",
+      "error": "HTTP Error 429: Too Many Requests"
     },
     "ES": {
-      "status": "available",
-      "price": 7671.5,
-      "change": -57.5,
-      "change_pct": -0.744,
-      "as_of": "2026-08-25T03:06:19Z",
-      "freshness_seconds": 602,
-      "latency_class": "public-delayed-or-indicative",
-      "source": "Yahoo Finance public chart",
-      "exchange": "CME"
+      "status": "unavailable",
+      "error": "HTTP Error 429: Too Many Requests"
     },
     "RTY": {
-      "status": "available",
-      "price": 3003.3,
-      "change": -36.6,
-      "change_pct": -1.204,
-      "as_of": "2026-08-25T03:06:04Z",
-      "freshness_seconds": 617,
-      "latency_class": "public-delayed-or-indicative",
-      "source": "Yahoo Finance public chart",
-      "exchange": "CME"
+      "status": "unavailable",
+      "error": "HTTP Error 429: Too Many Requests"
     },
     "QQQ": {
-      "status": "available",
-      "price": 706.2588,
-      "change": -23.6112,
-      "change_pct": -3.235,
-      "as_of": "2026-08-24T23:59:53Z",
-      "freshness_seconds": 11788,
-      "latency_class": "public-delayed-or-indicative",
-      "source": "Yahoo Finance public chart",
-      "exchange": "NGM"
+      "status": "unavailable",
+      "error": "HTTP Error 429: Too Many Requests"
     },
     "SOXX": {
-      "status": "available",
-      "price": 505.5,
-      "change": -53.62,
-      "change_pct": -9.59,
-      "as_of": "2026-08-24T23:59:57Z",
-      "freshness_seconds": 11784,
-      "latency_class": "public-delayed-or-indicative",
-      "source": "Yahoo Finance public chart",
-      "exchange": "NGM"
+      "status": "unavailable",
+      "error": "HTTP Error 429: Too Many Requests"
     },
     "VIX": {
-      "status": "available",
-      "price": 15.84,
-      "change": 0.0,
-      "change_pct": 0.0,
-      "as_of": "2026-08-24T20:10:00Z",
-      "freshness_seconds": 25582,
-      "latency_class": "public-delayed-or-indicative",
-      "source": "Yahoo Finance public chart",
-      "exchange": "CXI"
+      "status": "unavailable",
+      "error": "HTTP Error 429: Too Many Requests"
     },
     "US10Y": {
-      "status": "available",
-      "price": 4.704,
-      "change": -0.002,
-      "change_pct": -0.042,
-      "as_of": "2026-08-24T18:55:00Z",
-      "freshness_seconds": 30082,
-      "latency_class": "public-delayed-or-indicative",
-      "source": "Yahoo Finance public chart",
-      "exchange": "CGI"
+      "status": "unavailable",
+      "error": "HTTP Error 429: Too Many Requests"
     },
     "DXY": {
-      "status": "available",
-      "price": 99.042,
-      "change": 0.212,
-      "change_pct": 0.215,
-      "as_of": "2026-08-25T03:06:20Z",
-      "freshness_seconds": 602,
-      "latency_class": "public-delayed-or-indicative",
-      "source": "Yahoo Finance public chart",
-      "exchange": "NYB"
+      "status": "unavailable",
+      "error": "HTTP Error 429: Too Many Requests"
     },
     "NVDA": {
-      "status": "available",
-      "price": 208.8,
-      "change": -16.21,
-      "change_pct": -7.204,
-      "as_of": "2026-08-24T23:59:55Z",
-      "freshness_seconds": 11787,
-      "latency_class": "public-delayed-or-indicative",
-      "source": "Yahoo Finance public chart",
-      "exchange": "NMS"
+      "status": "unavailable",
+      "error": "HTTP Error 429: Too Many Requests"
     },
     "MSFT": {
-      "status": "available",
-      "price": 487.28,
-      "change": 6.93,
-      "change_pct": 1.443,
-      "as_of": "2026-08-24T23:59:30Z",
-      "freshness_seconds": 11812,
-      "latency_class": "public-delayed-or-indicative",
-      "source": "Yahoo Finance public chart",
-      "exchange": "NMS"
+      "status": "unavailable",
+      "error": "HTTP Error 429: Too Many Requests"
     },
     "AAPL": {
-      "status": "available",
-      "price": 310.66,
-      "change": 5.07,
-      "change_pct": 1.659,
-      "as_of": "2026-08-24T23:59:30Z",
-      "freshness_seconds": 11812,
-      "latency_class": "public-delayed-or-indicative",
-      "source": "Yahoo Finance public chart",
-      "exchange": "NMS"
+      "status": "unavailable",
+      "error": "HTTP Error 429: Too Many Requests"
     },
     "AMZN": {
-      "status": "available",
-      "price": 262.6,
-      "change": 1.29,
-      "change_pct": 0.494,
-      "as_of": "2026-08-24T23:59:58Z",
-      "freshness_seconds": 11784,
-      "latency_class": "public-delayed-or-indicative",
-      "source": "Yahoo Finance public chart",
-      "exchange": "NMS"
+      "status": "unavailable",
+      "error": "HTTP Error 429: Too Many Requests"
     },
     "META": {
-      "status": "available",
-      "price": 560.2,
-      "change": -8.77,
-      "change_pct": -1.541,
-      "as_of": "2026-08-24T23:59:52Z",
-      "freshness_seconds": 11790,
-      "latency_class": "public-delayed-or-indicative",
-      "source": "Yahoo Finance public chart",
-      "exchange": "NMS"
+      "status": "unavailable",
+      "error": "HTTP Error 429: Too Many Requests"
     },
     "GOOGL": {
-      "status": "available",
-      "price": 347.95,
-      "change": 3.95,
-      "change_pct": 1.148,
-      "as_of": "2026-08-24T23:59:55Z",
-      "freshness_seconds": 11787,
-      "latency_class": "public-delayed-or-indicative",
-      "source": "Yahoo Finance public chart",
-      "exchange": "NMS"
+      "status": "unavailable",
+      "error": "HTTP Error 429: Too Many Requests"
     },
     "AVGO": {
-      "status": "available",
-      "price": 358.6291,
-      "change": -33.8009,
-      "change_pct": -8.613,
-      "as_of": "2026-08-24T23:59:52Z",
-      "freshness_seconds": 11790,
-      "latency_class": "public-delayed-or-indicative",
-      "source": "Yahoo Finance public chart",
-      "exchange": "NMS"
+      "status": "unavailable",
+      "error": "HTTP Error 429: Too Many Requests"
     },
     "TSLA": {
-      "status": "available",
-      "price": 349.34,
-      "change": 10.04,
-      "change_pct": 2.959,
-      "as_of": "2026-08-24T23:59:57Z",
-      "freshness_seconds": 11786,
-      "latency_class": "public-delayed-or-indicative",
-      "source": "Yahoo Finance public chart",
-      "exchange": "NMS"
+      "status": "unavailable",
+      "error": "HTTP Error 429: Too Many Requests"
     }
   },
   "liquidity": {
-    "status": "available",
-    "trading_day": "2026-08-25",
-    "levels": {
-      "last": 29127.75,
-      "session_open": 29140.5,
-      "vwap": 29106.98,
-      "previous_high": 29243.0,
-      "previous_low": 28946.75,
-      "previous_close": 29099.5,
-      "overnight_high": 29168.25,
-      "overnight_low": 29017.0,
-      "opening_range_high": null,
-      "opening_range_low": null,
-      "week_high": 29480.5,
-      "week_low": 28946.75,
-      "month_high": 29757.25,
-      "month_low": 28946.75
-    },
-    "profile": {
-      "vah": 29156.43,
-      "poc": 29118.62,
-      "val": 29085.54,
-      "hvn": [
-        29118.62,
-        29085.54,
-        29128.07
-      ],
-      "lvn": [
-        29142.25,
-        29109.17,
-        29094.99
-      ]
-    },
-    "pools": [
-      {
-        "side": "buy-side",
-        "kind": "equal highs",
-        "level": 29129.42,
-        "touches": 3,
-        "last_bar": 15
-      },
-      {
-        "side": "buy-side",
-        "kind": "equal highs",
-        "level": 29144.62,
-        "touches": 2,
-        "last_bar": 38
-      },
-      {
-        "side": "sell-side",
-        "kind": "equal lows",
-        "level": 29113.0,
-        "touches": 3,
-        "last_bar": 37
-      },
-      {
-        "side": "sell-side",
-        "kind": "equal lows",
-        "level": 29094.5,
-        "touches": 2,
-        "last_bar": 59
-      },
-      {
-        "side": "sell-side",
-        "kind": "equal lows",
-        "level": 29104.0,
-        "touches": 2,
-        "last_bar": 51
-      },
-      {
-        "side": "buy-side",
-        "kind": "previous high",
-        "level": 29243.0
-      },
-      {
-        "side": "buy-side",
-        "kind": "overnight high",
-        "level": 29168.25
-      },
-      {
-        "side": "buy-side",
-        "kind": "week high",
-        "level": 29480.5
-      },
-      {
-        "side": "sell-side",
-        "kind": "previous low",
-        "level": 28946.75
-      },
-      {
-        "side": "sell-side",
-        "kind": "overnight low",
-        "level": 29017.0
-      },
-      {
-        "side": "sell-side",
-        "kind": "week low",
-        "level": 28946.75
-      }
-    ],
-    "sweeps": [],
-    "fair_value_gaps": [
-      {
-        "type": "bearish",
-        "low": 29044.5,
-        "high": 29060.0
-      },
-      {
-        "type": "bullish",
-        "low": 29102.0,
-        "high": 29106.0
-      },
-      {
-        "type": "bearish",
-        "low": 29117.25,
-        "high": 29124.75
-      },
-      {
-        "type": "bearish",
-        "low": 29121.25,
-        "high": 29135.75
-      },
-      {
-        "type": "bearish",
-        "low": 29113.25,
-        "high": 29118.25
-      },
-      {
-        "type": "bullish",
-        "low": 29113.25,
-        "high": 29121.5
-      }
-    ],
-    "inventory": "above_vwap",
-    "atr_5m_14": 25.62
+    "status": "unavailable",
+    "levels": {},
+    "profile": {},
+    "pools": [],
+    "sweeps": []
   },
   "trendlines": {
-    "status": "available",
+    "status": "unavailable",
     "timeframes": {
       "5m": {
-        "status": "available",
-        "state": "uptrend",
-        "event": "inside channel",
-        "slope_points_per_bar": 0.4012,
-        "normalized_slope": 1.127,
-        "quality_r2": 0.102,
-        "center": 29127.75,
-        "upper": 29153.3,
-        "lower": 29102.2,
-        "last": 29127.75,
-        "bars": 72,
-        "as_of": "2026-08-25T03:06:19Z"
+        "status": "insufficient"
       },
       "15m": {
-        "status": "available",
-        "state": "downtrend",
-        "event": "inside channel",
-        "slope_points_per_bar": -1.1499,
-        "normalized_slope": -1.697,
-        "quality_r2": 0.128,
-        "center": 29102.68,
-        "upper": 29158.65,
-        "lower": 29046.71,
-        "last": 29127.75,
-        "bars": 64,
-        "as_of": "2026-08-25T03:00:00Z"
+        "status": "insufficient"
       },
       "1h": {
-        "status": "available",
-        "state": "downtrend",
-        "event": "inside channel",
-        "slope_points_per_bar": -8.5759,
-        "normalized_slope": -4.02,
-        "quality_r2": 0.75,
-        "center": 29080.92,
-        "upper": 29172.93,
-        "lower": 28988.91,
-        "last": 29127.75,
-        "bars": 48,
-        "as_of": "2026-08-25T03:00:00Z"
+        "status": "insufficient"
       },
       "4h": {
-        "status": "available",
-        "state": "downtrend",
-        "event": "inside channel",
-        "slope_points_per_bar": -19.6765,
-        "normalized_slope": -3.073,
-        "quality_r2": 0.713,
-        "center": 29145.61,
-        "upper": 29263.72,
-        "lower": 29027.5,
-        "last": 29127.75,
-        "bars": 25,
-        "as_of": "2026-08-25T00:00:00Z"
+        "status": "insufficient"
       },
       "1d": {
-        "status": "available",
-        "state": "downtrend",
-        "event": "inside channel",
-        "slope_points_per_bar": -13.4147,
-        "normalized_slope": -2.098,
-        "quality_r2": 0.109,
-        "center": 29115.91,
-        "upper": 29943.13,
-        "lower": 28288.69,
-        "last": 29128.75,
-        "bars": 60,
-        "as_of": "2026-08-25T03:06:21Z"
+        "status": "insufficient"
       }
     },
-    "confluence": -0.745,
-    "posture": "bearish alignment",
+    "confluence": 0,
+    "posture": "mixed structure",
     "active_breaks": []
   },
   "breadth": {
-    "coverage": 8,
-    "advancers": 5,
-    "decliners": 3,
-    "average_change_pct": -1.207,
-    "dispersion_pct": 4.061,
-    "leaders": [
-      {
-        "symbol": "TSLA",
-        "change_pct": 2.959
-      },
-      {
-        "symbol": "AAPL",
-        "change_pct": 1.659
-      },
-      {
-        "symbol": "MSFT",
-        "change_pct": 1.443
-      }
-    ],
-    "laggards": [
-      {
-        "symbol": "AVGO",
-        "change_pct": -8.613
-      },
-      {
-        "symbol": "NVDA",
-        "change_pct": -7.204
-      },
-      {
-        "symbol": "META",
-        "change_pct": -1.541
-      }
-    ]
+    "coverage": 0,
+    "advancers": 0,
+    "decliners": 0,
+    "average_change_pct": null,
+    "dispersion_pct": null,
+    "leaders": [],
+    "laggards": []
   },
   "divergences": [],
   "events": [
@@ -725,16 +402,16 @@
     {
       "name": "Bullish acceptance",
       "probability": 38,
-      "trigger": "Acceptance above 29,168.25",
+      "trigger": "Acceptance above nearest pool",
       "confirmation": "5m close, VWAP hold and QQQ/SOXX participation",
-      "invalidation": "Return below 29,106.98"
+      "invalidation": "Return below nearest pool"
     },
     {
       "name": "Bearish distribution",
       "probability": 34,
-      "trigger": "Acceptance below 29,017.00",
+      "trigger": "Acceptance below nearest pool",
       "confirmation": "Failed reclaim, firm yields/VIX and deteriorating breadth",
-      "invalidation": "Reclaim above 29,106.98"
+      "invalidation": "Reclaim above nearest pool"
     },
     {
       "name": "Two-way / no-trade",
@@ -748,205 +425,205 @@
     {
       "name": "Regime Transition Classifier",
       "reading": "two-way-auction",
-      "confidence": 0.74,
-      "as_of": "2026-08-25T03:16:21.368901Z"
+      "confidence": 0.48,
+      "as_of": "2026-08-25T05:08:50.050229Z"
     },
     {
       "name": "Breadth & Leadership Monitor",
-      "reading": "5 up / 3 down",
-      "confidence": 0.75,
-      "as_of": "2026-08-25T03:16:21.368901Z"
+      "reading": "0 up / 0 down",
+      "confidence": 0.1,
+      "as_of": "2026-08-25T05:08:50.050229Z"
     },
     {
       "name": "Treasury Funding Stress Monitor",
       "reading": "public rates and official communications active",
       "confidence": 0.62,
-      "as_of": "2026-08-25T03:16:21.368901Z"
+      "as_of": "2026-08-25T05:08:50.050229Z"
     },
     {
       "name": "Volatility & Gamma Proxy",
       "reading": "proxy active; no dealer-position claim",
       "confidence": 0.55,
-      "as_of": "2026-08-25T03:16:21.368901Z"
+      "as_of": "2026-08-25T05:08:50.050229Z"
     },
     {
       "name": "Narrative Velocity",
       "reading": "0 high-relevance developments",
       "confidence": 0.7,
-      "as_of": "2026-08-25T03:16:21.368901Z"
+      "as_of": "2026-08-25T05:08:50.050229Z"
     },
     {
       "name": "Freshness Quarantine",
-      "reading": "21/24 sources healthy",
-      "confidence": 0.88,
-      "as_of": "2026-08-25T03:16:21.368901Z"
+      "reading": "4/24 sources healthy",
+      "confidence": 0.17,
+      "as_of": "2026-08-25T05:08:50.050229Z"
     },
     {
       "name": "Cash-Open Auction Playbook",
       "reading": "opening-drive classification ready",
       "confidence": 0.7,
-      "as_of": "2026-08-25T03:16:21.368901Z"
+      "as_of": "2026-08-25T05:08:50.050229Z"
     },
     {
       "name": "Anomaly & Divergence Detector",
       "reading": "0 active divergences",
       "confidence": 0.75,
-      "as_of": "2026-08-25T03:16:21.368901Z"
+      "as_of": "2026-08-25T05:08:50.050229Z"
     },
     {
       "name": "FOMC Language Drift Monitor",
       "reading": "official-language comparison active",
       "confidence": 0.65,
-      "as_of": "2026-08-25T03:16:21.368901Z"
+      "as_of": "2026-08-25T05:08:50.050229Z"
     },
     {
       "name": "Risk Budget & Permission Gate",
       "reading": "fail-closed controls active",
       "confidence": 0.9,
-      "as_of": "2026-08-25T03:16:21.368901Z"
+      "as_of": "2026-08-25T05:08:50.050229Z"
     }
   ],
   "source_health": [
     {
       "name": "Market: NQ",
-      "status": "healthy",
-      "as_of": "2026-08-25T03:06:19Z",
+      "status": "unavailable",
+      "as_of": null,
       "latency_class": "public-delayed-or-indicative",
-      "item_count": 1088,
-      "error": null
+      "item_count": 0,
+      "error": "HTTP Error 429: Too Many Requests"
     },
     {
       "name": "Market: ES",
-      "status": "healthy",
-      "as_of": "2026-08-25T03:06:19Z",
+      "status": "unavailable",
+      "as_of": null,
       "latency_class": "public-delayed-or-indicative",
-      "item_count": 1090,
-      "error": null
+      "item_count": 0,
+      "error": "HTTP Error 429: Too Many Requests"
     },
     {
       "name": "Market: RTY",
-      "status": "healthy",
-      "as_of": "2026-08-25T03:06:04Z",
+      "status": "unavailable",
+      "as_of": null,
       "latency_class": "public-delayed-or-indicative",
-      "item_count": 1087,
-      "error": null
+      "item_count": 0,
+      "error": "HTTP Error 429: Too Many Requests"
     },
     {
       "name": "Market: QQQ",
-      "status": "healthy",
-      "as_of": "2026-08-24T23:59:53Z",
+      "status": "unavailable",
+      "as_of": null,
       "latency_class": "public-delayed-or-indicative",
-      "item_count": 961,
-      "error": null
+      "item_count": 0,
+      "error": "HTTP Error 429: Too Many Requests"
     },
     {
       "name": "Market: SOXX",
-      "status": "healthy",
-      "as_of": "2026-08-24T23:59:57Z",
+      "status": "unavailable",
+      "as_of": null,
       "latency_class": "public-delayed-or-indicative",
-      "item_count": 959,
-      "error": null
+      "item_count": 0,
+      "error": "HTTP Error 429: Too Many Requests"
     },
     {
       "name": "Market: VIX",
-      "status": "healthy",
-      "as_of": "2026-08-24T20:10:00Z",
+      "status": "unavailable",
+      "as_of": null,
       "latency_class": "public-delayed-or-indicative",
-      "item_count": 780,
-      "error": null
+      "item_count": 0,
+      "error": "HTTP Error 429: Too Many Requests"
     },
     {
       "name": "Market: US10Y",
-      "status": "healthy",
-      "as_of": "2026-08-24T18:55:00Z",
+      "status": "unavailable",
+      "as_of": null,
       "latency_class": "public-delayed-or-indicative",
-      "item_count": 400,
-      "error": null
+      "item_count": 0,
+      "error": "HTTP Error 429: Too Many Requests"
     },
     {
       "name": "Market: DXY",
-      "status": "healthy",
-      "as_of": "2026-08-25T03:06:20Z",
+      "status": "unavailable",
+      "as_of": null,
       "latency_class": "public-delayed-or-indicative",
-      "item_count": 1071,
-      "error": null
+      "item_count": 0,
+      "error": "HTTP Error 429: Too Many Requests"
     },
     {
       "name": "Market: NVDA",
-      "status": "healthy",
-      "as_of": "2026-08-24T23:59:55Z",
+      "status": "unavailable",
+      "as_of": null,
       "latency_class": "public-delayed-or-indicative",
-      "item_count": 961,
-      "error": null
+      "item_count": 0,
+      "error": "HTTP Error 429: Too Many Requests"
     },
     {
       "name": "Market: MSFT",
-      "status": "healthy",
-      "as_of": "2026-08-24T23:59:30Z",
+      "status": "unavailable",
+      "as_of": null,
       "latency_class": "public-delayed-or-indicative",
-      "item_count": 961,
-      "error": null
+      "item_count": 0,
+      "error": "HTTP Error 429: Too Many Requests"
     },
     {
       "name": "Market: AAPL",
-      "status": "healthy",
-      "as_of": "2026-08-24T23:59:30Z",
+      "status": "unavailable",
+      "as_of": null,
       "latency_class": "public-delayed-or-indicative",
-      "item_count": 961,
-      "error": null
+      "item_count": 0,
+      "error": "HTTP Error 429: Too Many Requests"
     },
     {
       "name": "Market: AMZN",
-      "status": "healthy",
-      "as_of": "2026-08-24T23:59:58Z",
+      "status": "unavailable",
+      "as_of": null,
       "latency_class": "public-delayed-or-indicative",
-      "item_count": 961,
-      "error": null
+      "item_count": 0,
+      "error": "HTTP Error 429: Too Many Requests"
     },
     {
       "name": "Market: META",
-      "status": "healthy",
-      "as_of": "2026-08-24T23:59:52Z",
+      "status": "unavailable",
+      "as_of": null,
       "latency_class": "public-delayed-or-indicative",
-      "item_count": 961,
-      "error": null
+      "item_count": 0,
+      "error": "HTTP Error 429: Too Many Requests"
     },
     {
       "name": "Market: GOOGL",
-      "status": "healthy",
-      "as_of": "2026-08-24T23:59:55Z",
+      "status": "unavailable",
+      "as_of": null,
       "latency_class": "public-delayed-or-indicative",
-      "item_count": 961,
-      "error": null
+      "item_count": 0,
+      "error": "HTTP Error 429: Too Many Requests"
     },
     {
       "name": "Market: AVGO",
-      "status": "healthy",
-      "as_of": "2026-08-24T23:59:52Z",
+      "status": "unavailable",
+      "as_of": null,
       "latency_class": "public-delayed-or-indicative",
-      "item_count": 961,
-      "error": null
+      "item_count": 0,
+      "error": "HTTP Error 429: Too Many Requests"
     },
     {
       "name": "Market: TSLA",
-      "status": "healthy",
-      "as_of": "2026-08-24T23:59:57Z",
+      "status": "unavailable",
+      "as_of": null,
       "latency_class": "public-delayed-or-indicative",
-      "item_count": 961,
-      "error": null
+      "item_count": 0,
+      "error": "HTTP Error 429: Too Many Requests"
     },
     {
       "name": "Market: NQ daily structure",
-      "status": "healthy",
-      "as_of": "2026-08-25T03:06:21Z",
+      "status": "unavailable",
+      "as_of": null,
       "latency_class": "public-delayed-or-indicative",
-      "item_count": 127,
-      "error": null
+      "item_count": 0,
+      "error": "HTTP Error 429: Too Many Requests"
     },
     {
       "name": "Federal Reserve",
       "status": "healthy",
-      "as_of": "2026-08-25T03:16:21.368901Z",
+      "as_of": "2026-08-25T05:08:50.050229Z",
       "latency_class": "official-live",
       "item_count": 8,
       "error": null
@@ -954,7 +631,7 @@
     {
       "name": "BLS",
       "status": "healthy",
-      "as_of": "2026-08-25T03:16:21.368901Z",
+      "as_of": "2026-08-25T05:08:50.050229Z",
       "latency_class": "official-live",
       "item_count": 1,
       "error": null
@@ -970,7 +647,7 @@
     {
       "name": "SEC",
       "status": "healthy",
-      "as_of": "2026-08-25T03:16:21.368901Z",
+      "as_of": "2026-08-25T05:08:50.050229Z",
       "latency_class": "official-live",
       "item_count": 8,
       "error": null
@@ -994,22 +671,55 @@
     {
       "name": "BLS release calendar",
       "status": "healthy",
-      "as_of": "2026-08-25T03:16:21.368901Z",
+      "as_of": "2026-08-25T05:08:50.050229Z",
       "latency_class": "official-live",
       "item_count": 12,
       "error": null
     }
   ],
   "data_quality": {
-    "healthy_sources": 21,
+    "healthy_sources": 4,
     "total_sources": 24,
-    "coverage": 0.875,
+    "coverage": 0.167,
     "stale_or_failed": [
+      "Market: NQ",
+      "Market: ES",
+      "Market: RTY",
+      "Market: QQQ",
+      "Market: SOXX",
+      "Market: VIX",
+      "Market: US10Y",
+      "Market: DXY",
+      "Market: NVDA",
+      "Market: MSFT",
+      "Market: AAPL",
+      "Market: AMZN",
+      "Market: META",
+      "Market: GOOGL",
+      "Market: AVGO",
+      "Market: TSLA",
+      "Market: NQ daily structure",
       "U.S. Treasury",
       "CFTC",
       "GDELT news discovery"
     ],
     "errors": [
+      "Market: NQ: HTTP Error 429: Too Many Requests",
+      "Market: ES: HTTP Error 429: Too Many Requests",
+      "Market: RTY: HTTP Error 429: Too Many Requests",
+      "Market: QQQ: HTTP Error 429: Too Many Requests",
+      "Market: SOXX: HTTP Error 429: Too Many Requests",
+      "Market: VIX: HTTP Error 429: Too Many Requests",
+      "Market: US10Y: HTTP Error 429: Too Many Requests",
+      "Market: DXY: HTTP Error 429: Too Many Requests",
+      "Market: NVDA: HTTP Error 429: Too Many Requests",
+      "Market: MSFT: HTTP Error 429: Too Many Requests",
+      "Market: AAPL: HTTP Error 429: Too Many Requests",
+      "Market: AMZN: HTTP Error 429: Too Many Requests",
+      "Market: META: HTTP Error 429: Too Many Requests",
+      "Market: GOOGL: HTTP Error 429: Too Many Requests",
+      "Market: AVGO: HTTP Error 429: Too Many Requests",
+      "Market: TSLA: HTTP Error 429: Too Many Requests",
       "U.S. Treasury: The read operation timed out",
       "CFTC: HTTP Error 404: Not Found",
       "GDELT: HTTP Error 429: Too Many Requests"
