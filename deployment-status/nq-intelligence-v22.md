@@ -1,0 +1,22 @@
+# NQ Intelligence Firm v2.2 — Production Verification
+
+- Verified: 2026-08-26
+- Production URL: https://hank475.github.io/tanzer-anderson-website/nq-intelligence/
+- Hosting: GitHub Pages + independently scheduled GitHub Actions publication
+- Primary instrument: NQ
+- UI version: 2.2
+- Appearance: light ultra-quiet luxury
+- Liquidity Atlas: three-lane price, event, and session-profile model active
+- Trendline Intelligence: five-timeframe state, channel, fit, and cue model active
+- Oil Intelligence Radar: retained, interactive, filtered, and source-linked
+- Enhancement suite: 30 total; 10 new v2.2 proxy engines active
+- Live-public evidence package: connected
+- Public market data classification: delayed or indicative; not exchange-licensed tick real-time
+- Desktop browser runtime: PASS
+- Mobile browser runtime: PASS
+- JavaScript exception check: PASS
+- Data-resource requests: PASS
+- Responsive overflow check: PASS
+- Interactive filters, module drawer, command palette, and radar nodes: PASS
+- Synthetic replacement values: disabled
+- Result: PRODUCTION VERIFIED
