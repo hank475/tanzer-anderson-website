@@ -1,0 +1,225 @@
+name: Deploy RoomTone Acoustic Thermometer
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - cloud/roomtone-payload/**
+      - cloud/roomtone-release.sha256
+      - .github/workflows/deploy-roomtone.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: roomtone-production
+  cancel-in-progress: false
+
+env:
+  PROJECT_NAME: roomtone-acoustic
+  COMPATIBILITY_DATE: '2026-08-27'
+
+jobs:
+  qa-deploy-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+    steps:
+      - name: Check out release repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Materialize verified RoomTone release
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          archive="$RUNNER_TEMP/roomtone-release.tar.gz"
+          cat cloud/roomtone-payload/part-* | tr -d '\r\n' | base64 --decode > "$archive"
+          test -s "$archive"
+          expected=$(awk '{print $1}' cloud/roomtone-release.sha256)
+          echo "$expected  $archive" | sha256sum --check
+          rm -rf cloud/roomtone
+          mkdir -p cloud/roomtone
+          tar -xzf "$archive" -C cloud/roomtone
+          test -s cloud/roomtone/public/index.html
+          test -s cloud/roomtone/public/app.js
+          test -s cloud/roomtone/public/signal-core.js
+          test -s cloud/roomtone/tests/test.js
+
+      - name: Consolidated application QA
+        shell: bash
+        run: |
+          set -euo pipefail
+          node cloud/roomtone/tests/test.js
+          for file in \
+            cloud/roomtone/public/app.js \
+            cloud/roomtone/public/signal-core.js \
+            cloud/roomtone/public/analysis-worker.js \
+            cloud/roomtone/public/capture-worklet.js \
+            cloud/roomtone/public/sw.js; do
+            node --check "$file"
+          done
+          python3 -m json.tool cloud/roomtone/public/manifest.webmanifest >/dev/null
+          python3 - <<'PYQA'
+          from pathlib import Path
+          import json
+
+          root = Path('cloud/roomtone/public')
+          page = (root / 'index.html').read_text(encoding='utf-8')
+          app = (root / 'app.js').read_text(encoding='utf-8')
+          core = (root / 'signal-core.js').read_text(encoding='utf-8')
+          worker = (root / 'analysis-worker.js').read_text(encoding='utf-8')
+          manifest = json.loads((root / 'manifest.webmanifest').read_text(encoding='utf-8'))
+          headers = (root / '_headers').read_text(encoding='utf-8')
+
+          required_page = [
+              'RoomTone', 'Measure room', 'Fast estimate', 'Best reading',
+              'Calibration', 'History', 'Diagnostics', 'Experimental acoustic estimate'
+          ]
+          required_app = [
+              'getUserMedia', 'AudioWorkletNode', 'localStorage', 'requestWakeLock',
+              'runMeasurement', 'runCalibration', 'Simulation—not your room'
+          ]
+          required_core = [
+              'analyzeStereoRecording', 'analyzeMonoRecording', 'temperatureFromBeatFrequency',
+              'calibrationDistanceFromBeat', 'uncertaintyForMeasurement', 'unclear_beat_peak'
+          ]
+          required_worker = ['RoomToneCore.analyzeStereoRecording', 'RoomToneCore.analyzeMonoRecording']
+          missing = [x for x in required_page if x not in page]
+          missing += [x for x in required_app if x not in app]
+          missing += [x for x in required_core if x not in core]
+          missing += [x for x in required_worker if x not in worker]
+          if missing:
+              raise SystemExit(f'Missing required production capabilities: {missing}')
+
+          prohibited = [
+              'api.openai.com', 'google-analytics.com', 'googletagmanager.com',
+              'localhost:', 'hard-coded room temperature', 'fake room reading'
+          ]
+          present = [x for x in prohibited if x in page or x in app or x in core]
+          if present:
+              raise SystemExit(f'Prohibited production marker found: {present}')
+          if manifest.get('display') != 'standalone' or len(manifest.get('icons', [])) < 2:
+              raise SystemExit('PWA manifest is incomplete.')
+          if 'microphone=(self)' not in headers or 'Content-Security-Policy' not in headers:
+              raise SystemExit('Security and microphone headers are incomplete.')
+          if 'https://' in page or 'http://' in page:
+              raise SystemExit('The runtime shell contains an external dependency.')
+          print('RoomTone source and privacy QA: PASS')
+          PYQA
+
+      - name: Ensure dedicated Cloudflare Pages project exists
+        shell: bash
+        run: |
+          set -euo pipefail
+          api="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects"
+          code=$(curl -sS -o "$RUNNER_TEMP/roomtone-project.json" -w '%{http_code}' \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            -H 'Content-Type: application/json' \
+            "${api}/${PROJECT_NAME}")
+          if [ "$code" = "404" ]; then
+            jq -n --arg name "$PROJECT_NAME" --arg branch main --arg date "$COMPATIBILITY_DATE" \
+              '{name:$name,production_branch:$branch,compatibility_date:$date}' > "$RUNNER_TEMP/roomtone-create.json"
+            curl -fsS -X POST "$api" \
+              -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+              -H 'Content-Type: application/json' \
+              --data @"$RUNNER_TEMP/roomtone-create.json" > "$RUNNER_TEMP/roomtone-created.json"
+            jq -e '.success == true' "$RUNNER_TEMP/roomtone-created.json" >/dev/null
+          elif [ "$code" = "200" ]; then
+            jq -e '.success == true' "$RUNNER_TEMP/roomtone-project.json" >/dev/null
+          else
+            cat "$RUNNER_TEMP/roomtone-project.json" || true
+            echo "Unexpected Cloudflare project lookup status: $code" >&2
+            exit 1
+          fi
+
+      - name: Deploy RoomTone production PWA
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@latest pages deploy cloud/roomtone/public \
+            --project-name "$PROJECT_NAME" \
+            --branch main \
+            --commit-hash "$GITHUB_SHA" \
+            --commit-message "RoomTone acoustic thermometer production release" \
+            --commit-dirty=false \
+            2>&1 | tee "$RUNNER_TEMP/roomtone-deploy.log"
+
+      - name: Resolve production URL
+        id: production
+        shell: bash
+        run: |
+          set -euo pipefail
+          api="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/${PROJECT_NAME}"
+          curl -fsS \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            -H 'Content-Type: application/json' \
+            "$api" > "$RUNNER_TEMP/roomtone-live.json"
+          jq -e '.success == true' "$RUNNER_TEMP/roomtone-live.json" >/dev/null
+          subdomain=$(jq -r '.result.subdomain // empty' "$RUNNER_TEMP/roomtone-live.json")
+          test -n "$subdomain"
+          case "$subdomain" in
+            http://*|https://*) site_url="$subdomain" ;;
+            *) site_url="https://$subdomain" ;;
+          esac
+          echo "site_url=$site_url" >> "$GITHUB_OUTPUT"
+          echo "RoomTone production URL: $site_url"
+
+      - name: Verify the live mobile application
+        shell: bash
+        env:
+          SITE_URL: ${{ steps.production.outputs.site_url }}
+        run: |
+          set -euo pipefail
+          verified=false
+          for attempt in $(seq 1 18); do
+            page_code=$(curl -sS --max-time 30 -o "$RUNNER_TEMP/roomtone-home.html" -D "$RUNNER_TEMP/roomtone-headers.txt" -w '%{http_code}' "$SITE_URL/" || true)
+            app_code=$(curl -sS --max-time 30 -o "$RUNNER_TEMP/roomtone-app.js" -w '%{http_code}' "$SITE_URL/app.js" || true)
+            manifest_code=$(curl -sS --max-time 30 -o "$RUNNER_TEMP/roomtone-manifest.json" -w '%{http_code}' "$SITE_URL/manifest.webmanifest" || true)
+            if [ "$page_code" = "200" ] && [ "$app_code" = "200" ] && [ "$manifest_code" = "200" ] \
+              && grep -q 'RoomTone' "$RUNNER_TEMP/roomtone-home.html" \
+              && grep -q 'getUserMedia' "$RUNNER_TEMP/roomtone-app.js" \
+              && jq -e '.display == "standalone" and (.icons | length >= 2)' "$RUNNER_TEMP/roomtone-manifest.json" >/dev/null 2>&1; then
+              verified=true
+              break
+            fi
+            echo "Propagation check $attempt/18: home=$page_code app=$app_code manifest=$manifest_code"
+            sleep 10
+          done
+          test "$verified" = "true"
+          headers=$(tr -d '\r' < "$RUNNER_TEMP/roomtone-headers.txt" | tr '[:upper:]' '[:lower:]')
+          grep -q 'permissions-policy: microphone=(self)' <<< "$headers"
+          grep -q 'content-security-policy:' <<< "$headers"
+          grep -q 'x-content-type-options: nosniff' <<< "$headers"
+          grep -q 'x-robots-tag: noindex' <<< "$headers"
+          for asset in styles.css signal-core.js analysis-worker.js capture-worklet.js sw.js icons/icon-192.png icons/icon-512.png; do
+            curl -fsS --retry 2 --retry-all-errors --max-time 30 "$SITE_URL/$asset" >/dev/null
+          done
+          echo 'RoomTone production verification: PASS'
+
+      - name: Publish deployment summary
+        shell: bash
+        env:
+          SITE_URL: ${{ steps.production.outputs.site_url }}
+        run: |
+          {
+            echo '## RoomTone is live'
+            echo
+            echo "- Production URL: $SITE_URL"
+            echo '- Delivery: mobile-first HTTPS PWA'
+            echo '- Installation: optional; no ZIP, app-store download, account, or paid API'
+            echo '- Real microphone capture and local DSP: enabled'
+            echo '- Synthetic readings: explicitly isolated and labeled'
+            echo '- Local-only history and calibration: enabled'
+            echo '- Production smoke test and security headers: PASS'
+          } >> "$GITHUB_STEP_SUMMARY"
