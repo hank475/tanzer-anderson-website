@@ -1,0 +1,218 @@
+name: Publish RoomTone to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - cloud/roomtone-v2-payload/**
+      - cloud/roomtone-v2-release.sha256
+      - .github/workflows/publish-roomtone-pages.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: roomtone-pages-production
+  cancel-in-progress: false
+
+env:
+  SITE_URL: https://hank475.github.io/tanzer-anderson-website/roomtone
+
+jobs:
+  test-publish-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Check out repository and all publication branches
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up current Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Reconstruct checksum-locked release
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/roomtone-v2-release.tar.gz"
+          cat cloud/roomtone-v2-payload/part-* | tr -d '\r\n' | base64 --decode > "$archive"
+          expected=$(awk '{print $1}' cloud/roomtone-v2-release.sha256)
+          echo "$expected  $archive" | sha256sum --check
+          mkdir -p "$RUNNER_TEMP/roomtone-release"
+          tar -xzf "$archive" -C "$RUNNER_TEMP/roomtone-release"
+          echo "RELEASE_ROOT=$RUNNER_TEMP/roomtone-release" >> "$GITHUB_ENV"
+
+      - name: Test physics, signal processing, interface and PWA
+        shell: bash
+        run: |
+          set -euo pipefail
+          public="$RELEASE_ROOT/public"
+          tests="$RELEASE_ROOT/tests"
+          for file in index.html app.js physics.mjs signal.mjs styles.css manifest.webmanifest sw.js icon.svg icon-192.png icon-512.png; do
+            test -s "$public/$file"
+          done
+          test -s "$tests/test.mjs"
+
+          node --check "$public/app.js"
+          node --check "$public/physics.mjs"
+          node --check "$public/signal.mjs"
+          cp "$public/physics.mjs" "$tests/physics.mjs"
+          cp "$public/signal.mjs" "$tests/signal.mjs"
+          node "$tests/test.mjs"
+          python3 -m json.tool "$public/manifest.webmanifest" >/dev/null
+
+          PUBLIC_DIR="$public" python3 - <<'PYQA'
+          from pathlib import Path
+          import json, os, re
+
+          root = Path(os.environ['PUBLIC_DIR'])
+          page = (root / 'index.html').read_text(encoding='utf-8')
+          app = (root / 'app.js').read_text(encoding='utf-8')
+          signal = (root / 'signal.mjs').read_text(encoding='utf-8')
+          physics = (root / 'physics.mjs').read_text(encoding='utf-8')
+          worker = (root / 'sw.js').read_text(encoding='utf-8')
+          manifest = json.loads((root / 'manifest.webmanifest').read_text(encoding='utf-8'))
+
+          page_markers = [
+              'RoomTone', 'Measure this room', 'Mark two stable phone positions',
+              'id="fastModeButton"', '<strong>Fast</strong><span>3 passes</span>',
+              'id="bestModeButton"', '<strong>Best</strong><span>7 passes</span>',
+              'Improve this phone’s accuracy', 'Start two-position calibration',
+              'View a clearly labeled simulated example',
+              'What RoomTone cannot promise', 'mobile-web-app-capable'
+          ]
+          app_markers = [
+              'navigator.mediaDevices.getUserMedia', 'createScriptProcessor',
+              'analyzeEchoCapture', 'speedFromEchoDifferentialMps',
+              'temperatureFromEchoDifferentialC', 'localStorage',
+              'wall_echo_missing', 'echo_inconsistent', 'permission_denied',
+              'No microphone was used, no history item was created'
+          ]
+          signal_markers = [
+              'buildEchoPulseTrainSamples', 'analyzeEchoCapture',
+              'wall_echo_missing', 'echo_inconsistent'
+          ]
+          physics_markers = [
+              'speedFromEchoDifferentialMps',
+              'temperatureFromEchoDifferentialC',
+              'estimateEchoTemperatureUncertaintyC'
+          ]
+          worker_markers = ['roomtone-shell-v2.0.0', 'caches.open', 'self.clients.claim']
+
+          missing = []
+          for label, content, markers in [
+              ('index.html', page, page_markers), ('app.js', app, app_markers),
+              ('signal.mjs', signal, signal_markers), ('physics.mjs', physics, physics_markers),
+              ('sw.js', worker, worker_markers)
+          ]:
+              missing.extend(f'{label}: {marker}' for marker in markers if marker not in content)
+          if missing:
+              raise SystemExit(f'Missing RoomTone production capability: {missing}')
+
+          ids = re.findall(r'\bid="([^"]+)"', page)
+          if len(ids) != len(set(ids)):
+              raise SystemExit('Duplicate HTML IDs detected.')
+          referenced = set(re.findall(r"getElementById\(['\"]([^'\"]+)", app))
+          absent = sorted(referenced - set(ids))
+          if absent:
+              raise SystemExit(f'JavaScript references missing HTML IDs: {absent}')
+
+          combined = '\n'.join([page, app, signal, physics]).lower()
+          prohibited = [
+              'api.openai.com', 'google-analytics.com', 'googletagmanager.com',
+              'localhost:', 'hard-coded room temperature', 'fake room reading',
+              'lorem ipsum', 'coming soon'
+          ]
+          found = [marker for marker in prohibited if marker in combined]
+          if found:
+              raise SystemExit(f'Prohibited production marker found: {found}')
+
+          if manifest.get('display') != 'standalone' or manifest.get('start_url') != './' or len(manifest.get('icons', [])) < 2:
+              raise SystemExit('PWA manifest is incomplete.')
+          if 'https://' in page or 'http://' in page:
+              raise SystemExit('Runtime shell contains an external dependency.')
+          print('RoomTone consolidated production QA: PASS')
+          PYQA
+
+      - name: Publish only the RoomTone directory
+        shell: bash
+        run: |
+          set -euo pipefail
+          pages="$RUNNER_TEMP/gh-pages"
+          git fetch origin gh-pages
+          git worktree add -B gh-pages "$pages" origin/gh-pages
+
+          rm -rf "$pages/roomtone"
+          mkdir -p "$pages/roomtone"
+          cp -a "$RELEASE_ROOT/public/." "$pages/roomtone/"
+          rm -f "$pages/roomtone/_headers"
+          touch "$pages/.nojekyll"
+
+          git -C "$pages" config user.name 'github-actions[bot]'
+          git -C "$pages" config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git -C "$pages" add roomtone .nojekyll
+
+          if git -C "$pages" diff --cached --quiet; then
+            echo 'RoomTone is already current on gh-pages.'
+            exit 0
+          fi
+
+          git -C "$pages" commit -m "publish: RoomTone wall-echo PWA ${GITHUB_SHA}"
+          for attempt in $(seq 1 6); do
+            if git -C "$pages" push origin HEAD:gh-pages; then
+              exit 0
+            fi
+            echo "Concurrent gh-pages write; rebasing attempt $attempt/6."
+            git -C "$pages" pull --rebase origin gh-pages
+            sleep 3
+          done
+          exit 1
+
+      - name: Verify public HTTPS release
+        shell: bash
+        run: |
+          set -euo pipefail
+          ok=false
+          for attempt in $(seq 1 30); do
+            nonce="${GITHUB_SHA}-${attempt}"
+            home=$(curl -sS --max-time 30 -o "$RUNNER_TEMP/home.html" -w '%{http_code}' "$SITE_URL/?v=$nonce" || true)
+            app=$(curl -sS --max-time 30 -o "$RUNNER_TEMP/app.js" -w '%{http_code}' "$SITE_URL/app.js?v=$nonce" || true)
+            signal=$(curl -sS --max-time 30 -o "$RUNNER_TEMP/signal.mjs" -w '%{http_code}' "$SITE_URL/signal.mjs?v=$nonce" || true)
+            manifest=$(curl -sS --max-time 30 -o "$RUNNER_TEMP/manifest.json" -w '%{http_code}' "$SITE_URL/manifest.webmanifest?v=$nonce" || true)
+            worker=$(curl -sS --max-time 30 -o "$RUNNER_TEMP/sw.js" -w '%{http_code}' "$SITE_URL/sw.js?v=$nonce" || true)
+            if [ "$home" = 200 ] && [ "$app" = 200 ] && [ "$signal" = 200 ] && [ "$manifest" = 200 ] && [ "$worker" = 200 ] \
+              && grep -q 'Measure this room' "$RUNNER_TEMP/home.html" \
+              && grep -q 'navigator.mediaDevices.getUserMedia' "$RUNNER_TEMP/app.js" \
+              && grep -q 'analyzeEchoCapture' "$RUNNER_TEMP/signal.mjs" \
+              && grep -q 'roomtone-shell-v2.0.0' "$RUNNER_TEMP/sw.js" \
+              && jq -e '.display == "standalone" and (.icons | length >= 2)' "$RUNNER_TEMP/manifest.json" >/dev/null 2>&1; then
+              ok=true
+              break
+            fi
+            echo "GitHub Pages propagation $attempt/30: home=$home app=$app signal=$signal manifest=$manifest sw=$worker"
+            sleep 10
+          done
+          test "$ok" = true
+          for asset in styles.css physics.mjs icon.svg icon-192.png icon-512.png; do
+            curl -fsS --retry 2 --retry-all-errors --max-time 30 "$SITE_URL/$asset?v=$GITHUB_SHA" >/dev/null
+          done
+          echo "RoomTone production verification: PASS — $SITE_URL/"
+
+      - name: Summarize release
+        shell: bash
+        run: |
+          {
+            echo '## RoomTone is live'
+            echo
+            echo "- URL: $SITE_URL/"
+            echo '- One mobile HTTPS link; no ZIP, app-store download, login, paid API or backend'
+            echo '- Real microphone capture and on-device wall-echo signal processing'
+            echo '- iPhone-compatible mono input; two marked positions cancel shared browser latency'
+            echo '- Failure rejection, uncertainty, calibration, diagnostics, history and offline app shell enabled'
+            echo '- Numerical, synthetic-signal, interface, PWA and live-production verification: PASS'
+          } >> "$GITHUB_STEP_SUMMARY"
