@@ -10,39 +10,35 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: roomtone-production
   cancel-in-progress: false
 
 env:
-  PROJECT_NAME: roomtone-acoustic
-  COMPATIBILITY_DATE: '2026-08-27'
+  SITE_URL: https://hank475.github.io/tanzer-anderson-website/roomtone
 
 jobs:
   qa-deploy-verify:
     runs-on: ubuntu-latest
     timeout-minutes: 25
-    env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
     steps:
       - name: Check out release repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Materialize verified RoomTone release
         shell: bash
         run: |
           set -euo pipefail
-          test -n "$CLOUDFLARE_API_TOKEN"
-          test -n "$CLOUDFLARE_ACCOUNT_ID"
           archive="$RUNNER_TEMP/roomtone-v2-release.tar.gz"
           cat cloud/roomtone-v2-payload/part-* | tr -d '\r\n' | base64 --decode > "$archive"
           test -s "$archive"
@@ -83,7 +79,6 @@ jobs:
           physics = (root / 'physics.mjs').read_text(encoding='utf-8')
           service_worker = (root / 'sw.js').read_text(encoding='utf-8')
           manifest = json.loads((root / 'manifest.webmanifest').read_text(encoding='utf-8'))
-          headers = (root / '_headers').read_text(encoding='utf-8')
 
           required_page = [
               'RoomTone', 'Measure this room', 'Mark two stable phone positions',
@@ -136,120 +131,90 @@ jobs:
 
           if manifest.get('display') != 'standalone' or len(manifest.get('icons', [])) < 2:
               raise SystemExit('PWA manifest is incomplete.')
-          if 'microphone=(self)' not in headers or 'Content-Security-Policy' not in headers:
-              raise SystemExit('Security and microphone headers are incomplete.')
           if 'https://' in page or 'http://' in page:
               raise SystemExit('The runtime shell contains an external dependency.')
           print('RoomTone source, physics, privacy, and PWA QA: PASS')
           PYQA
 
-      - name: Ensure dedicated Cloudflare Pages project exists
+      - name: Publish isolated RoomTone directory to GitHub Pages
         shell: bash
         run: |
           set -euo pipefail
-          api="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects"
-          code=$(curl -sS -o "$RUNNER_TEMP/roomtone-project.json" -w '%{http_code}' \
-            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
-            -H 'Content-Type: application/json' \
-            "${api}/${PROJECT_NAME}")
-          if [ "$code" = "404" ]; then
-            jq -n --arg name "$PROJECT_NAME" --arg branch main --arg date "$COMPATIBILITY_DATE" \
-              '{name:$name,production_branch:$branch,compatibility_date:$date}' > "$RUNNER_TEMP/roomtone-create.json"
-            curl -fsS -X POST "$api" \
-              -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-              -H 'Content-Type: application/json' \
-              --data @"$RUNNER_TEMP/roomtone-create.json" > "$RUNNER_TEMP/roomtone-created.json"
-            jq -e '.success == true' "$RUNNER_TEMP/roomtone-created.json" >/dev/null
-          elif [ "$code" = "200" ]; then
-            jq -e '.success == true' "$RUNNER_TEMP/roomtone-project.json" >/dev/null
-          else
-            cat "$RUNNER_TEMP/roomtone-project.json" || true
-            echo "Unexpected Cloudflare project lookup status: $code" >&2
-            exit 1
+          pages="$RUNNER_TEMP/roomtone-gh-pages"
+          rm -rf "$pages"
+          git fetch origin gh-pages
+          git worktree add -B gh-pages "$pages" origin/gh-pages
+
+          rm -rf "$pages/roomtone"
+          mkdir -p "$pages/roomtone"
+          cp -a cloud/roomtone-v2/public/. "$pages/roomtone/"
+          rm -f "$pages/roomtone/_headers"
+          touch "$pages/.nojekyll"
+
+          git -C "$pages" config user.name 'github-actions[bot]'
+          git -C "$pages" config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git -C "$pages" add roomtone .nojekyll
+
+          if git -C "$pages" diff --cached --quiet; then
+            echo 'RoomTone publication is already current.'
+            exit 0
           fi
 
-      - name: Deploy RoomTone production PWA
-        shell: bash
-        run: |
-          set -euo pipefail
-          npx --yes wrangler@latest pages deploy cloud/roomtone-v2/public \
-            --project-name "$PROJECT_NAME" \
-            --branch main \
-            --commit-hash "$GITHUB_SHA" \
-            --commit-message "RoomTone iPhone-compatible wall-echo release" \
-            --commit-dirty=false \
-            2>&1 | tee "$RUNNER_TEMP/roomtone-deploy.log"
+          git -C "$pages" commit -m "publish: RoomTone iPhone-compatible wall-echo PWA ${GITHUB_SHA}"
+          for attempt in $(seq 1 6); do
+            if git -C "$pages" push origin HEAD:gh-pages; then
+              exit 0
+            fi
+            echo "Concurrent gh-pages update detected; rebasing attempt $attempt/6."
+            git -C "$pages" pull --rebase origin gh-pages
+            sleep 3
+          done
+          echo 'Unable to publish RoomTone after six protected retries.' >&2
+          exit 1
 
-      - name: Resolve production URL
-        id: production
+      - name: Verify live HTTPS mobile application
         shell: bash
-        run: |
-          set -euo pipefail
-          api="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/${PROJECT_NAME}"
-          curl -fsS \
-            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
-            -H 'Content-Type: application/json' \
-            "$api" > "$RUNNER_TEMP/roomtone-live.json"
-          jq -e '.success == true' "$RUNNER_TEMP/roomtone-live.json" >/dev/null
-          subdomain=$(jq -r '.result.subdomain // empty' "$RUNNER_TEMP/roomtone-live.json")
-          test -n "$subdomain"
-          case "$subdomain" in
-            http://*|https://*) site_url="$subdomain" ;;
-            *) site_url="https://$subdomain" ;;
-          esac
-          echo "site_url=$site_url" >> "$GITHUB_OUTPUT"
-          echo "RoomTone production URL: $site_url"
-
-      - name: Verify the live mobile application
-        shell: bash
-        env:
-          SITE_URL: ${{ steps.production.outputs.site_url }}
         run: |
           set -euo pipefail
           verified=false
-          for attempt in $(seq 1 18); do
-            page_code=$(curl -sS --max-time 30 -o "$RUNNER_TEMP/roomtone-home.html" -D "$RUNNER_TEMP/roomtone-headers.txt" -w '%{http_code}' "$SITE_URL/" || true)
-            app_code=$(curl -sS --max-time 30 -o "$RUNNER_TEMP/roomtone-app.js" -w '%{http_code}' "$SITE_URL/app.js" || true)
-            manifest_code=$(curl -sS --max-time 30 -o "$RUNNER_TEMP/roomtone-manifest.json" -w '%{http_code}' "$SITE_URL/manifest.webmanifest" || true)
-            signal_code=$(curl -sS --max-time 30 -o "$RUNNER_TEMP/roomtone-signal.mjs" -w '%{http_code}' "$SITE_URL/signal.mjs" || true)
+          for attempt in $(seq 1 30); do
+            stamp="${GITHUB_SHA}-${attempt}"
+            page_code=$(curl -sS --max-time 30 -o "$RUNNER_TEMP/roomtone-home.html" -w '%{http_code}' "$SITE_URL/?v=$stamp" || true)
+            app_code=$(curl -sS --max-time 30 -o "$RUNNER_TEMP/roomtone-app.js" -w '%{http_code}' "$SITE_URL/app.js?v=$stamp" || true)
+            manifest_code=$(curl -sS --max-time 30 -o "$RUNNER_TEMP/roomtone-manifest.json" -w '%{http_code}' "$SITE_URL/manifest.webmanifest?v=$stamp" || true)
+            signal_code=$(curl -sS --max-time 30 -o "$RUNNER_TEMP/roomtone-signal.mjs" -w '%{http_code}' "$SITE_URL/signal.mjs?v=$stamp" || true)
+            sw_code=$(curl -sS --max-time 30 -o "$RUNNER_TEMP/roomtone-sw.js" -w '%{http_code}' "$SITE_URL/sw.js?v=$stamp" || true)
             if [ "$page_code" = "200" ] && [ "$app_code" = "200" ] \
-              && [ "$manifest_code" = "200" ] && [ "$signal_code" = "200" ] \
+              && [ "$manifest_code" = "200" ] && [ "$signal_code" = "200" ] && [ "$sw_code" = "200" ] \
               && grep -q 'Measure this room' "$RUNNER_TEMP/roomtone-home.html" \
               && grep -q 'navigator.mediaDevices.getUserMedia' "$RUNNER_TEMP/roomtone-app.js" \
               && grep -q 'analyzeEchoCapture' "$RUNNER_TEMP/roomtone-signal.mjs" \
+              && grep -q 'roomtone-shell-v2.0.0' "$RUNNER_TEMP/roomtone-sw.js" \
               && jq -e '.display == "standalone" and (.icons | length >= 2)' "$RUNNER_TEMP/roomtone-manifest.json" >/dev/null 2>&1; then
               verified=true
               break
             fi
-            echo "Propagation check $attempt/18: home=$page_code app=$app_code manifest=$manifest_code signal=$signal_code"
+            echo "Pages propagation $attempt/30: home=$page_code app=$app_code manifest=$manifest_code signal=$signal_code sw=$sw_code"
             sleep 10
           done
           test "$verified" = "true"
-          headers=$(tr -d '\r' < "$RUNNER_TEMP/roomtone-headers.txt" | tr '[:upper:]' '[:lower:]')
-          grep -q 'permissions-policy: microphone=(self)' <<< "$headers"
-          grep -q 'content-security-policy:' <<< "$headers"
-          grep -q 'x-content-type-options: nosniff' <<< "$headers"
-          grep -q 'x-robots-tag: noindex' <<< "$headers"
-          for asset in styles.css physics.mjs sw.js icon.svg icon-192.png icon-512.png; do
-            curl -fsS --retry 2 --retry-all-errors --max-time 30 "$SITE_URL/$asset" >/dev/null
+          for asset in styles.css physics.mjs icon.svg icon-192.png icon-512.png; do
+            curl -fsS --retry 2 --retry-all-errors --max-time 30 "$SITE_URL/$asset?v=$GITHUB_SHA" >/dev/null
           done
-          curl -fsS --retry 2 --retry-all-errors --max-time 30 "$SITE_URL/sw.js" | grep -q 'roomtone-shell-v2.0.0'
-          echo 'RoomTone production verification: PASS'
+          echo "RoomTone production verification: PASS — $SITE_URL/"
 
       - name: Publish deployment summary
         shell: bash
-        env:
-          SITE_URL: ${{ steps.production.outputs.site_url }}
         run: |
           {
             echo '## RoomTone is live'
             echo
-            echo "- Production URL: $SITE_URL"
+            echo "- Production URL: $SITE_URL/"
             echo '- Delivery: mobile-first HTTPS PWA'
             echo '- Installation: optional; no ZIP, app-store download, account, or paid API'
             echo '- Measurement: two-position, mono-compatible wall-echo time of flight'
             echo '- Real microphone capture and local signal processing: enabled'
             echo '- Synthetic readings: explicitly isolated and labeled'
             echo '- Local-only history and calibration: enabled'
-            echo '- Numerical, synthetic-signal, privacy, security-header, and production smoke tests: PASS'
+            echo '- Numerical, synthetic-signal, privacy, PWA, and live production tests: PASS'
           } >> "$GITHUB_STEP_SUMMARY"
