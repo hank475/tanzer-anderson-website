@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f4f0e8">
+  <meta name="color-scheme" content="light">
+  <meta name="description" content="RoomTone is an experimental wall-echo room-temperature estimator that uses one phone speaker and microphone.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="RoomTone">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icon-192.png">
+  <link rel="stylesheet" href="./styles.css">
+  <title>RoomTone — Acoustic Room Thermometer</title>
+</head>
+<body>
+  <div class="app-shell">
+    <aside id="installBanner" class="install-banner" hidden>
+      <div>
+        <strong>Keep RoomTone on your Home Screen</strong>
+        <span id="installText">Open Share, then choose Add to Home Screen.</span>
+      </div>
+      <button id="installButton" class="text-button" type="button">How</button>
+      <button id="dismissInstall" class="icon-button" type="button" aria-label="Dismiss install suggestion">×</button>
+    </aside>
+
+    <header class="app-header">
+      <div class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></div>
+      <div class="brand-copy">
+        <p class="eyebrow">Acoustic room thermometer</p>
+        <h1>RoomTone</h1>
+      </div>
+      <div class="privacy-pill"><span class="status-dot"></span> On-device</div>
+    </header>
+
+    <main id="mainContent">
+      <section id="page-measure" class="page active" data-page="measure" aria-labelledby="measureHeading">
+        <div class="hero-card">
+          <div class="hero-topline">
+            <span id="calibrationBadge" class="badge neutral">Factory profile</span>
+            <span id="lastUpdated" class="subtle">No reading yet</span>
+          </div>
+          <div id="latestReading" class="temperature-display" aria-live="polite">
+            <span id="temperatureValue">—</span><span id="temperatureUnit">°F</span>
+          </div>
+          <p id="temperatureRange" class="temperature-range">Run a measurement to estimate the air temperature here.</p>
+          <div id="latestQualityRow" class="quality-row" hidden>
+            <span id="latestComfort" class="comfort-label"></span>
+            <span aria-hidden="true">•</span>
+            <span id="latestQuality"></span>
+          </div>
+          <button id="measureButton" class="primary-button" type="button">
+            <span class="button-orb" aria-hidden="true"></span>
+            Measure this room
+          </button>
+          <p class="microcopy">Uses two brief wall-echo captures with one microphone. Nothing is uploaded.</p>
+        </div>
+
+        <div class="mode-card" role="group" aria-labelledby="measureHeading">
+          <div>
+            <p class="section-kicker">Measurement</p>
+            <h2 id="measureHeading">Choose the pass depth</h2>
+          </div>
+          <div class="segmented-control" aria-label="Measurement mode">
+            <button id="fastModeButton" class="segment active" type="button" data-mode="fast">
+              <strong>Fast</strong><span>3 passes</span>
+            </button>
+            <button id="bestModeButton" class="segment" type="button" data-mode="best">
+              <strong>Best</strong><span>7 passes</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="form-card inline-setup" aria-labelledby="wallSetupHeading">
+          <div class="setup-heading">
+            <div><p class="section-kicker">Wall setup</p><h2 id="wallSetupHeading">Mark two stable phone positions</h2></div>
+            <span class="badge neutral">No extra electronics</span>
+          </div>
+          <label class="field-label" for="distancePreset">Distance preset</label>
+          <select id="distancePreset">
+            <option value="recommended">Recommended — 24 in / 48 in</option>
+            <option value="paper">Letter-paper marks — 22 in / 44 in</option>
+            <option value="compact">Compact room — 12 in / 24 in</option>
+            <option value="custom">Custom distances</option>
+          </select>
+          <div class="distance-inputs">
+            <label><span>Near mark</span><input id="nearDistance" type="number" inputmode="decimal" min="8" max="120" step="0.1" value="24"></label>
+            <label><span>Far mark</span><input id="farDistance" type="number" inputmode="decimal" min="12" max="160" step="0.1" value="48"></label>
+            <div class="unit-switch compact distance-unit" role="group" aria-label="Wall distance unit">
+              <button id="distanceUnitIn" class="active" type="button">in</button>
+              <button id="distanceUnitCm" type="button">cm</button>
+            </div>
+          </div>
+          <p id="setupHint" class="field-help setup-hint">Use a tape measure and mark both positions on a stable surface. Point the phone’s bottom edge straight at the wall.</p>
+        </div>
+
+        <div class="insight-grid">
+          <article class="insight-card">
+            <span class="insight-icon" aria-hidden="true">≈</span>
+            <div><strong>Estimated, not exact</strong><p>The result includes a defensible uncertainty band.</p></div>
+          </article>
+          <article class="insight-card">
+            <span class="insight-icon" aria-hidden="true">◫</span>
+            <div><strong>iPhone-compatible echo method</strong><p>Two wall positions cancel browser audio latency without requiring stereo capture.</p></div>
+          </article>
+        </div>
+
+        <div id="compatibilityCard" class="compatibility-card">
+          <div class="compatibility-copy">
+            <p class="section-kicker">Before the first reading</p>
+            <h2>One microphone and one bare wall</h2>
+            <p>Mark two phone positions from a large bare wall. RoomTone measures how the same echo changes between them.</p>
+          </div>
+          <button id="diagnosticButton" class="secondary-button" type="button">Start wall measurement</button>
+        </div>
+      </section>
+
+      <section id="page-history" class="page" data-page="history" aria-labelledby="historyHeading" hidden>
+        <div class="page-heading">
+          <p class="eyebrow">Stored only on this phone</p>
+          <h2 id="historyHeading">Reading history</h2>
+          <p>Each accepted acoustic reading includes its range, quality and calibration status.</p>
+        </div>
+        <div id="historyList" class="history-list"></div>
+        <div id="historyEmpty" class="empty-state">
+          <div class="empty-symbol">∿</div>
+          <h3>No accepted readings yet</h3>
+          <p>Your first real measurement will appear here.</p>
+          <button class="secondary-button nav-shortcut" data-target="measure" type="button">Measure now</button>
+        </div>
+        <button id="clearHistoryButton" class="danger-button" type="button" hidden>Delete all history</button>
+      </section>
+
+      <section id="page-calibrate" class="page" data-page="calibrate" aria-labelledby="calibrateHeading" hidden>
+        <div class="page-heading">
+          <p class="eyebrow">One-point calibration</p>
+          <h2 id="calibrateHeading">Improve this phone’s accuracy</h2>
+          <p>Enter one trustworthy room temperature, then repeat the two-position wall capture. RoomTone saves a correction for this setup.</p>
+        </div>
+
+        <article id="calibrationStatusCard" class="status-card">
+          <div>
+            <p class="section-kicker">Current status</p>
+            <h3 id="calibrationStatusTitle">Using the measured wall distances</h3>
+            <p id="calibrationStatusDetail">The two-position method works without temperature calibration. One reference reading can reduce systematic echo-path error.</p>
+          </div>
+          <span id="calibrationStatusPill" class="badge neutral">Uncalibrated</span>
+        </article>
+
+        <form id="calibrationForm" class="form-card">
+          <label class="field-label" for="referenceTemperature">Known room temperature</label>
+          <div class="temperature-input-row">
+            <input id="referenceTemperature" type="number" inputmode="decimal" min="30" max="110" step="0.1" value="72" required>
+            <div class="unit-switch compact" role="group" aria-label="Calibration temperature unit">
+              <button id="referenceUnitF" class="active" type="button">°F</button>
+              <button id="referenceUnitC" type="button">°C</button>
+            </div>
+          </div>
+          <label class="field-label" for="humidityInput">Relative humidity</label>
+          <div class="range-row">
+            <input id="humidityInput" type="range" min="0" max="100" step="1" value="50">
+            <output id="humidityOutput" for="humidityInput">50%</output>
+          </div>
+          <p class="field-help">A thermostat or passive thermometer can supply the optional reference. Use the same wall marks as normal measurements; the reference is never uploaded.</p>
+          <button id="calibrateButton" class="primary-button" type="submit">Start two-position calibration</button>
+          <button id="removeCalibrationButton" class="danger-button" type="button" hidden>Remove saved calibration</button>
+        </form>
+      </section>
+
+      <section id="page-method" class="page" data-page="method" aria-labelledby="methodHeading" hidden>
+        <div class="page-heading">
+          <p class="eyebrow">How it works</p>
+          <h2 id="methodHeading">A real signal, with hard limits</h2>
+          <p>RoomTone measures the change in a wall echo between two known phone positions using one microphone.</p>
+        </div>
+
+        <div class="method-stack">
+          <article class="method-card">
+            <span>01</span><div><h3>Position</h3><p>Place the phone at the near mark, then the far mark, with its bottom edge aimed at one large bare wall.</p></div>
+          </article>
+          <article class="method-card">
+            <span>02</span><div><h3>Echo</h3><p>The speaker emits short coded chirps. The microphone resolves the direct pulse and the wall reflection at each position.</p></div>
+          </article>
+          <article class="method-card">
+            <span>03</span><div><h3>Cancel latency</h3><p>Subtracting the near echo delay from the far echo delay removes the browser’s unknown input/output latency.</p></div>
+          </article>
+          <article class="method-card">
+            <span>04</span><div><h3>Estimate</h3><p>The known distance difference and measured time difference yield sound speed, then air temperature with humidity compensation.</p></div>
+          </article>
+        </div>
+
+        <article class="limitations-card">
+          <h3>What RoomTone cannot promise</h3>
+          <p>A bedroom has temperature gradients, and reflections vary with wall material, cases, placement and browser audio processing. This is not a safety, medical, laboratory or HVAC commissioning instrument. Accurate wall marks and stable placement matter more than screen precision.</p>
+        </article>
+
+        <form id="settingsForm" class="form-card settings-card">
+          <h3>Measurement settings</h3>
+          <label class="field-label" for="deviceProfile">Phone acoustic profile</label>
+          <select id="deviceProfile">
+            <option value="iphone-large">Large iPhone — Pro Max / Plus</option>
+            <option value="iphone-standard">Standard iPhone — 6.1-inch class</option>
+            <option value="android-large">Large Android phone</option>
+            <option value="other-phone">Other phone — conservative</option>
+          </select>
+          <label class="field-label">Display unit</label>
+          <div class="unit-switch" role="group" aria-label="Display temperature unit">
+            <button id="displayUnitF" class="active" type="button">Fahrenheit</button>
+            <button id="displayUnitC" type="button">Celsius</button>
+          </div>
+        </form>
+
+        <details class="diagnostics-card">
+          <summary>Last measurement diagnostics</summary>
+          <div id="diagnosticsContent" class="diagnostics-content">No measurement has run on this device.</div>
+        </details>
+
+        <button id="demoButton" class="text-button demo-button" type="button">View a clearly labeled simulated example</button>
+      </section>
+    </main>
+
+    <nav class="bottom-nav" aria-label="Primary navigation">
+      <button class="nav-button active" data-target="measure" type="button"><span aria-hidden="true">◉</span><strong>Measure</strong></button>
+      <button class="nav-button" data-target="history" type="button"><span aria-hidden="true">⌁</span><strong>History</strong></button>
+      <button class="nav-button" data-target="calibrate" type="button"><span aria-hidden="true">◇</span><strong>Calibrate</strong></button>
+      <button class="nav-button" data-target="method" type="button"><span aria-hidden="true">i</span><strong>Method</strong></button>
+    </nav>
+  </div>
+
+  <div id="prepModal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="prepTitle">
+    <div class="modal-scrim"></div>
+    <div class="modal-sheet">
+      <button id="closePrepButton" class="modal-close" type="button" aria-label="Close">×</button>
+      <p class="eyebrow">Prepare the phone</p>
+      <h2 id="prepTitle">A stable two-position measurement</h2>
+      <div class="checklist">
+        <label><input type="checkbox" checked disabled><span><strong>Set media volume near 75%</strong><small>Not silent and not maximum.</small></span></label>
+        <label><input type="checkbox" checked disabled><span><strong>Pause fans, TV and music</strong><small>Competing reflections and air movement lower confidence.</small></span></label>
+        <label><input type="checkbox" checked disabled><span><strong>Use a stable surface</strong><small>Do not hand-hold the phone; point its bottom edge directly at the wall.</small></span></label>
+      </div>
+      <div class="notice-row"><span>Sound</span><p>You will hear several short coded chirps at each wall position.</p></div>
+      <button id="beginMeasurementButton" class="primary-button" type="button">Begin measurement</button>
+      <p class="microcopy centered">Microphone audio is analyzed in memory and discarded after each position.</p>
+    </div>
+  </div>
+
+  <div id="progressModal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="progressTitle">
+    <div class="modal-scrim"></div>
+    <div class="modal-sheet progress-sheet">
+      <div class="progress-orbit" aria-hidden="true"><div id="progressRing" class="progress-ring"><span id="progressPercent">0</span></div></div>
+      <p class="eyebrow">Do not move the phone</p>
+      <h2 id="progressTitle">Checking the room</h2>
+      <p id="progressDetail">Preparing the audio path…</p>
+      <div class="phase-list" aria-label="Measurement phases">
+        <span id="phasePermission">Microphone</span>
+        <span id="phaseSweep">Sweeps</span>
+        <span id="phaseAnalyze">Analysis</span>
+        <span id="phaseValidate">Validation</span>
+      </div>
+      <button id="cancelMeasurementButton" class="text-button" type="button">Cancel</button>
+    </div>
+  </div>
+
+  <div id="messageModal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="messageTitle">
+    <div class="modal-scrim"></div>
+    <div class="modal-sheet">
+      <div id="messageIcon" class="message-icon">!</div>
+      <p id="messageEyebrow" class="eyebrow">Measurement stopped</p>
+      <h2 id="messageTitle">No reading was created</h2>
+      <p id="messageBody">RoomTone could not validate the acoustic signal.</p>
+      <div id="messageDetails" class="message-details" hidden></div>
+      <button id="messagePrimaryButton" class="primary-button" type="button">Try again</button>
+      <button id="messageSecondaryButton" class="text-button" type="button">Close</button>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" hidden role="status" aria-live="polite"></div>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
