@@ -47,93 +47,87 @@ jobs:
           rm -rf cloud/roomtone-v2
           mkdir -p cloud/roomtone-v2
           tar -xzf "$archive" -C cloud/roomtone-v2
-          test -s cloud/roomtone-v2/public/index.html
-          test -s cloud/roomtone-v2/public/app.js
-          test -s cloud/roomtone-v2/public/physics.mjs
-          test -s cloud/roomtone-v2/public/signal.mjs
-          test -s cloud/roomtone-v2/public/styles.css
-          test -s cloud/roomtone-v2/public/manifest.webmanifest
-          test -s cloud/roomtone-v2/public/sw.js
-          test -s cloud/roomtone-v2/public/icon-192.png
-          test -s cloud/roomtone-v2/public/icon-512.png
+          for file in index.html app.js physics.mjs signal.mjs styles.css manifest.webmanifest sw.js icon.svg icon-192.png icon-512.png; do
+            test -s "cloud/roomtone-v2/public/$file"
+          done
           test -s cloud/roomtone-v2/tests/test.mjs
 
       - name: Consolidated application QA
         shell: bash
         run: |
           set -euo pipefail
-          node --check cloud/roomtone-v2/public/app.js
-          node --check cloud/roomtone-v2/public/physics.mjs
-          node --check cloud/roomtone-v2/public/signal.mjs
-          node cloud/roomtone-v2/tests/test.mjs
-          python3 -m json.tool cloud/roomtone-v2/public/manifest.webmanifest >/dev/null
+          root=cloud/roomtone-v2
+          node --check "$root/public/app.js"
+          node --check "$root/public/physics.mjs"
+          node --check "$root/public/signal.mjs"
+          cp "$root/public/physics.mjs" "$root/tests/physics.mjs"
+          cp "$root/public/signal.mjs" "$root/tests/signal.mjs"
+          node "$root/tests/test.mjs"
+          python3 -m json.tool "$root/public/manifest.webmanifest" >/dev/null
           python3 - <<'PYQA'
           from pathlib import Path
-          import json
-          import re
+          import json, re
 
           root = Path('cloud/roomtone-v2/public')
-          page = (root / 'index.html').read_text(encoding='utf-8')
-          app = (root / 'app.js').read_text(encoding='utf-8')
-          signal = (root / 'signal.mjs').read_text(encoding='utf-8')
-          physics = (root / 'physics.mjs').read_text(encoding='utf-8')
-          service_worker = (root / 'sw.js').read_text(encoding='utf-8')
-          manifest = json.loads((root / 'manifest.webmanifest').read_text(encoding='utf-8'))
-
-          required_page = [
-              'RoomTone', 'Measure this room', 'Mark two stable phone positions',
-              'Fast · 3 passes', 'Best · 7 passes', 'Calibrate this phone and wall setup',
-              'What RoomTone cannot promise', 'Simulated example — not a reading',
-              'mobile-web-app-capable'
-          ]
-          required_app = [
-              'navigator.mediaDevices.getUserMedia', 'createScriptProcessor',
-              'analyzeEchoCapture', 'speedFromEchoDifferentialMps',
-              'temperatureFromEchoDifferentialC', 'localStorage',
-              'wall_echo_missing', 'echo_inconsistent', 'permission_denied',
-              'No microphone was used, no history item was created'
-          ]
-          required_signal = [
-              'buildEchoPulseTrainSamples', 'analyzeEchoCapture',
-              'wall_echo_missing', 'echo_inconsistent'
-          ]
-          required_physics = [
-              'speedFromEchoDifferentialMps', 'temperatureFromEchoDifferentialC',
-              'estimateEchoTemperatureUncertaintyC'
-          ]
-          required_worker = ['roomtone-shell-v2.0.0', 'caches.open', 'self.clients.claim']
-
-          missing = [x for x in required_page if x not in page]
-          missing += [x for x in required_app if x not in app]
-          missing += [x for x in required_signal if x not in signal]
-          missing += [x for x in required_physics if x not in physics]
-          missing += [x for x in required_worker if x not in service_worker]
+          files = {name: (root / name).read_text(encoding='utf-8') for name in [
+              'index.html', 'app.js', 'physics.mjs', 'signal.mjs', 'sw.js'
+          ]}
+          page, app = files['index.html'], files['app.js']
+          required = {
+              'index.html': [
+                  'RoomTone', 'Measure this room', 'Mark two stable phone positions',
+                  'Fast · 3 passes', 'Best · 7 passes',
+                  'Calibrate this phone and wall setup',
+                  'What RoomTone cannot promise',
+                  'Simulated example — not a reading',
+                  'mobile-web-app-capable'
+              ],
+              'app.js': [
+                  'navigator.mediaDevices.getUserMedia', 'createScriptProcessor',
+                  'analyzeEchoCapture', 'speedFromEchoDifferentialMps',
+                  'temperatureFromEchoDifferentialC', 'localStorage',
+                  'wall_echo_missing', 'echo_inconsistent', 'permission_denied',
+                  'No microphone was used, no history item was created'
+              ],
+              'signal.mjs': [
+                  'buildEchoPulseTrainSamples', 'analyzeEchoCapture',
+                  'wall_echo_missing', 'echo_inconsistent'
+              ],
+              'physics.mjs': [
+                  'speedFromEchoDifferentialMps',
+                  'temperatureFromEchoDifferentialC',
+                  'estimateEchoTemperatureUncertaintyC'
+              ],
+              'sw.js': ['roomtone-shell-v2.0.0', 'caches.open', 'self.clients.claim'],
+          }
+          missing = [f'{name}: {token}' for name, tokens in required.items() for token in tokens if token not in files[name]]
           if missing:
               raise SystemExit(f'Missing required RoomTone capabilities: {missing}')
 
           ids = re.findall(r'\bid="([^"]+)"', page)
           if len(ids) != len(set(ids)):
               raise SystemExit('Duplicate HTML IDs detected.')
-          js_ids = set(re.findall(r"getElementById\(['\"]([^'\"]+)", app))
-          missing_ids = sorted(js_ids - set(ids))
-          if missing_ids:
-              raise SystemExit(f'JavaScript references missing HTML IDs: {missing_ids}')
+          referenced = set(re.findall(r"getElementById\(['\"]([^'\"]+)", app))
+          absent = sorted(referenced - set(ids))
+          if absent:
+              raise SystemExit(f'JavaScript references missing HTML IDs: {absent}')
 
+          combined = '\n'.join(files.values()).lower()
           prohibited = [
               'api.openai.com', 'google-analytics.com', 'googletagmanager.com',
               'localhost:', 'hard-coded room temperature', 'fake room reading',
-              'TODO', 'FIXME', 'coming soon', 'lorem ipsum'
+              'todo', 'fixme', 'coming soon', 'lorem ipsum'
           ]
-          combined = '\n'.join([page, app, signal, physics])
-          present = [x for x in prohibited if x.lower() in combined.lower()]
-          if present:
-              raise SystemExit(f'Prohibited production marker found: {present}')
+          found = [token for token in prohibited if token in combined]
+          if found:
+              raise SystemExit(f'Prohibited production marker found: {found}')
 
-          if manifest.get('display') != 'standalone' or len(manifest.get('icons', [])) < 2:
+          manifest = json.loads((root / 'manifest.webmanifest').read_text(encoding='utf-8'))
+          if manifest.get('display') != 'standalone' or manifest.get('start_url') != './' or len(manifest.get('icons', [])) < 2:
               raise SystemExit('PWA manifest is incomplete.')
           if 'https://' in page or 'http://' in page:
               raise SystemExit('The runtime shell contains an external dependency.')
-          print('RoomTone source, physics, privacy, and PWA QA: PASS')
+          print('RoomTone source, numerical, privacy, and PWA QA: PASS')
           PYQA
 
       - name: Publish isolated RoomTone directory to GitHub Pages
@@ -154,7 +148,6 @@ jobs:
           git -C "$pages" config user.name 'github-actions[bot]'
           git -C "$pages" config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git -C "$pages" add roomtone .nojekyll
-
           if git -C "$pages" diff --cached --quiet; then
             echo 'RoomTone publication is already current.'
             exit 0
@@ -179,25 +172,25 @@ jobs:
           verified=false
           for attempt in $(seq 1 30); do
             stamp="${GITHUB_SHA}-${attempt}"
-            page_code=$(curl -sS --max-time 30 -o "$RUNNER_TEMP/roomtone-home.html" -w '%{http_code}' "$SITE_URL/?v=$stamp" || true)
-            app_code=$(curl -sS --max-time 30 -o "$RUNNER_TEMP/roomtone-app.js" -w '%{http_code}' "$SITE_URL/app.js?v=$stamp" || true)
-            manifest_code=$(curl -sS --max-time 30 -o "$RUNNER_TEMP/roomtone-manifest.json" -w '%{http_code}' "$SITE_URL/manifest.webmanifest?v=$stamp" || true)
-            signal_code=$(curl -sS --max-time 30 -o "$RUNNER_TEMP/roomtone-signal.mjs" -w '%{http_code}' "$SITE_URL/signal.mjs?v=$stamp" || true)
-            sw_code=$(curl -sS --max-time 30 -o "$RUNNER_TEMP/roomtone-sw.js" -w '%{http_code}' "$SITE_URL/sw.js?v=$stamp" || true)
-            if [ "$page_code" = "200" ] && [ "$app_code" = "200" ] \
-              && [ "$manifest_code" = "200" ] && [ "$signal_code" = "200" ] && [ "$sw_code" = "200" ] \
-              && grep -q 'Measure this room' "$RUNNER_TEMP/roomtone-home.html" \
-              && grep -q 'navigator.mediaDevices.getUserMedia' "$RUNNER_TEMP/roomtone-app.js" \
-              && grep -q 'analyzeEchoCapture' "$RUNNER_TEMP/roomtone-signal.mjs" \
-              && grep -q 'roomtone-shell-v2.0.0' "$RUNNER_TEMP/roomtone-sw.js" \
-              && jq -e '.display == "standalone" and (.icons | length >= 2)' "$RUNNER_TEMP/roomtone-manifest.json" >/dev/null 2>&1; then
+            page_code=$(curl -sS --max-time 30 -o "$RUNNER_TEMP/home.html" -w '%{http_code}' "$SITE_URL/?v=$stamp" || true)
+            app_code=$(curl -sS --max-time 30 -o "$RUNNER_TEMP/app.js" -w '%{http_code}' "$SITE_URL/app.js?v=$stamp" || true)
+            manifest_code=$(curl -sS --max-time 30 -o "$RUNNER_TEMP/manifest.json" -w '%{http_code}' "$SITE_URL/manifest.webmanifest?v=$stamp" || true)
+            signal_code=$(curl -sS --max-time 30 -o "$RUNNER_TEMP/signal.mjs" -w '%{http_code}' "$SITE_URL/signal.mjs?v=$stamp" || true)
+            sw_code=$(curl -sS --max-time 30 -o "$RUNNER_TEMP/sw.js" -w '%{http_code}' "$SITE_URL/sw.js?v=$stamp" || true)
+            if [ "$page_code" = 200 ] && [ "$app_code" = 200 ] && [ "$manifest_code" = 200 ] \
+              && [ "$signal_code" = 200 ] && [ "$sw_code" = 200 ] \
+              && grep -q 'Measure this room' "$RUNNER_TEMP/home.html" \
+              && grep -q 'navigator.mediaDevices.getUserMedia' "$RUNNER_TEMP/app.js" \
+              && grep -q 'analyzeEchoCapture' "$RUNNER_TEMP/signal.mjs" \
+              && grep -q 'roomtone-shell-v2.0.0' "$RUNNER_TEMP/sw.js" \
+              && jq -e '.display == "standalone" and (.icons | length >= 2)' "$RUNNER_TEMP/manifest.json" >/dev/null 2>&1; then
               verified=true
               break
             fi
             echo "Pages propagation $attempt/30: home=$page_code app=$app_code manifest=$manifest_code signal=$signal_code sw=$sw_code"
             sleep 10
           done
-          test "$verified" = "true"
+          test "$verified" = true
           for asset in styles.css physics.mjs icon.svg icon-192.png icon-512.png; do
             curl -fsS --retry 2 --retry-all-errors --max-time 30 "$SITE_URL/$asset?v=$GITHUB_SHA" >/dev/null
           done
