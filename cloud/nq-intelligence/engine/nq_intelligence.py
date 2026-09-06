@@ -7,7 +7,7 @@ from zoneinfo import ZoneInfo
 CT=ZoneInfo('America/Chicago'); UTC=timezone.utc
 UA='NQ-Intelligence-Firm/2.0 public-source research (henry@tanzeranderson.com)'
 SYMS={'NQ':'NQ=F','ES':'ES=F','RTY':'RTY=F','QQQ':'QQQ','SOXX':'SOXX','VIX':'^VIX','US10Y':'^TNX','DXY':'DX-Y.NYB','NVDA':'NVDA','MSFT':'MSFT','AAPL':'AAPL','AMZN':'AMZN','META':'META','GOOGL':'GOOGL','AVGO':'AVGO','TSLA':'TSLA'}
-FEEDS=[('Federal Reserve','https://www.federalreserve.gov/feeds/press_all.xml'),('BLS','https://www.bls.gov/feed/bls_latest.rss'),('U.S. Treasury','https://home.treasury.gov/news/press-releases/rss'),('SEC','https://www.sec.gov/news/pressreleases.rss'),('CFTC','https://www.cftc.gov/RSS/PressReleases.xml')]
+FEEDS=[('Federal Reserve','https://www.federalreserve.gov/feeds/press_all.xml'),('BLS','https://www.bls.gov/feed/bls_latest.rss'),('U.S. Treasury','https://home.treasury.gov/news/press-releases/rss'),('SEC','https://www.sec.gov/news/pressreleases.rss'),('CFTC','https://www.cftc.gov/RSS/RSSGP/rssgp.xml')]
 
 def now(): return datetime.now(UTC)
 def iso(x): return x.astimezone(UTC).isoformat().replace('+00:00','Z') if x else None
