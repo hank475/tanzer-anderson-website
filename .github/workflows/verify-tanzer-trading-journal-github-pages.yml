@@ -68,7 +68,7 @@ jobs:
           tr -d '\r\n' < "$RUNNER_TEMP/tanzer-release.b64" | base64 --decode > "$RUNNER_TEMP/tanzer-release.tgz"
           echo "$RELEASE_SHA256  $RUNNER_TEMP/tanzer-release.tgz" | sha256sum --check
           gzip --test "$RUNNER_TEMP/tanzer-release.tgz"
-          cat cloud/tanzer-trading-journal-payload/part-* | tr -d '\\r\\n' | base64 --decode > "$RUNNER_TEMP/tanzer-source.tgz"
+          cat cloud/tanzer-trading-journal-payload/part-* | tr -d '\r\n' | base64 --decode > "$RUNNER_TEMP/tanzer-source.tgz"
           cmp "$RUNNER_TEMP/tanzer-source.tgz" "$RUNNER_TEMP/tanzer-release.tgz"
 
           APP_DIR="$RUNNER_TEMP/tanzer-ledger-app"
