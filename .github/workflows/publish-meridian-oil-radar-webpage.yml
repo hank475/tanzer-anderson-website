@@ -36,6 +36,9 @@ jobs:
         with:
           node-version: '24'
 
+      - name: Validate EIA parsing and source identity safeguards
+        run: node --test cloud/meridian-oil-radar-extracted/tests/handler.test.mjs
+
       - name: Prepare existing GitHub Pages branch
         shell: bash
         run: |
@@ -273,6 +276,7 @@ jobs:
                 break
               fi
               if [ "$attempt" = '5' ]; then exit 1; fi
+              git pull --rebase origin gh-pages
               sleep 3
             done
           fi
@@ -282,6 +286,7 @@ jobs:
         run: |
           set -euo pipefail
           echo 'production-verification' > "$RUNNER_TEMP/meridian-stage"
+          expected_snapshot=$(jq -r '.generated_at' "$SITE_DIR/api/snapshot.json")
           verified=false
           for attempt in $(seq 1 30); do
             home_code=$(curl -sS -L --max-time 30 -o "$RUNNER_TEMP/oil-radar-home.html" -w '%{http_code}' "$PUBLIC_URL" || true)
@@ -289,7 +294,7 @@ jobs:
             if [ "$home_code" = '200' ] \
               && [ "$snapshot_code" = '200' ] \
               && grep -q 'Meridian Oil Radar' "$RUNNER_TEMP/oil-radar-home.html" \
-              && jq -e '.demo == false and .snapshot_mode == "scheduled" and (.news.items | type == "array") and (.market.instruments | type == "object")' "$RUNNER_TEMP/oil-radar-snapshot.json" >/dev/null 2>&1; then
+              && jq -e --arg expected "$expected_snapshot" '.generated_at == $expected and .demo == false and .snapshot_mode == "scheduled" and (.news.items | type == "array") and (.market.instruments | type == "object")' "$RUNNER_TEMP/oil-radar-snapshot.json" >/dev/null 2>&1; then
               verified=true
               break
             fi

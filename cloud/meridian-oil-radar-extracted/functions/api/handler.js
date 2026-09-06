@@ -18,11 +18,11 @@ const MARKET_SERIES = {
 
 const FUNDAMENTAL_SERIES = {
   crude_stocks: { series_id:"WCESTUS1", label:"U.S. Commercial Crude Stocks ex-SPR", short:"CRUDE STOCKS", unit:"thousand bbl", display_divisor:1000, display_unit:"MMbbl", decimals:1, bullish_when_down:true },
-  cushing_stocks: { series_id:"WCRSTUS1", label:"Cushing Crude Stocks", short:"CUSHING", unit:"thousand bbl", display_divisor:1000, display_unit:"MMbbl", decimals:1, bullish_when_down:true },
+  cushing_stocks: { series_id:"W_EPC0_SAX_YCUOK_MBBL", label:"Cushing Crude Stocks", short:"CUSHING", unit:"thousand bbl", display_divisor:1000, display_unit:"MMbbl", decimals:1, bullish_when_down:true },
   spr: { series_id:"WCSSTUS1", label:"Strategic Petroleum Reserve Stocks", short:"SPR", unit:"thousand bbl", display_divisor:1000, display_unit:"MMbbl", decimals:1, bullish_when_down:false },
   gasoline_stocks: { series_id:"WGTSTUS1", label:"U.S. Total Gasoline Stocks", short:"GASOLINE STOCKS", unit:"thousand bbl", display_divisor:1000, display_unit:"MMbbl", decimals:1, bullish_when_down:true },
   distillate_stocks: { series_id:"WDISTUS1", label:"U.S. Distillate Stocks", short:"DISTILLATES", unit:"thousand bbl", display_divisor:1000, display_unit:"MMbbl", decimals:1, bullish_when_down:true },
-  us_production: { series_id:"WPULEUS3", label:"U.S. Field Production of Crude Oil", short:"U.S. PRODUCTION", unit:"thousand bbl/day", display_divisor:1000, display_unit:"MMbbl/d", decimals:2, bullish_when_down:true }
+  us_production: { series_id:"WCRFPUS2", label:"U.S. Field Production of Crude Oil", short:"U.S. PRODUCTION", unit:"thousand bbl/day", display_divisor:1000, display_unit:"MMbbl/d", decimals:2, bullish_when_down:true }
 };
 
 const CATEGORY_KEYWORDS = {
@@ -156,6 +156,51 @@ async function fetchFredSeries(seriesId, start, health) {
     return rows;
   } catch (err) { healthError(health, name, err.message || err); throw err; }
 }
+
+// EIA identifiers are not FRED identifiers. Read the source's weekly history
+// table and reject missing, wrong-series or non-numeric observations.
+export function parseEiaWeeklyHTML(html, start="0000-01-01") {
+  const rows = [];
+  for (const match of String(html).matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)) {
+    const cells = [...match[1].matchAll(/<td\b[^>]*>([\s\S]*?)<\/td>/gi)]
+      .map(x=>decodeEntities(x[1].replace(/<[^>]+>/g,"")).replace(/&nbsp;|\u00a0/gi," ").trim());
+    const year = cells[0]?.match(/^(\d{4})-[A-Za-z]{3}$/)?.[1];
+    if (!year) continue;
+    for (let i=1; i+1<cells.length; i+=2) {
+      const md=cells[i].match(/^(\d{2})\/(\d{2})$/);
+      const numeric=cells[i+1].replace(/,/g,"");
+      if (!md || !/^\d+(?:\.\d+)?$/.test(numeric)) continue;
+      const date=year+"-"+md[1]+"-"+md[2], value=Number(numeric);
+      const parsed=new Date(date+"T00:00:00Z");
+      if (!Number.isFinite(parsed.getTime()) || parsed.toISOString().slice(0,10)!==date) continue;
+      if (date>=start) rows.push({date,value});
+    }
+  }
+  return [...new Map(rows.map(r=>[r.date,r])).values()].sort((a,b)=>a.date.localeCompare(b.date));
+}
+async function fetchEiaWeeklySeries(seriesId,start,health) {
+  const name="EIA:"+seriesId;
+  const url="https://www.eia.gov/dnav/pet/hist/LeafHandler.ashx?f=W&n=PET&s="+encodeURIComponent(seriesId);
+  const expected={
+    WCESTUS1:"Weekly U.S. Ending Stocks excluding SPR of Crude Oil",
+    W_EPC0_SAX_YCUOK_MBBL:"Weekly Cushing, OK Ending Stocks excluding SPR of Crude Oil",
+    WCSSTUS1:"Weekly U.S. Ending Stocks of Crude Oil in SPR",
+    WGTSTUS1:"Weekly U.S. Ending Stocks of Total Gasoline",
+    WDISTUS1:"Weekly U.S. Ending Stocks of Distillate Fuel Oil",
+    WCRFPUS2:"Weekly U.S. Field Production of Crude Oil"
+  };
+  try {
+    const res=await fetchWithTimeout(url,30000), html=await res.text();
+    const title=decodeEntities(html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]||"").replace(/\s+/g," ").trim();
+    const unit=seriesId==="WCRFPUS2"?"Thousand Barrels per Day":"Thousand Barrels";
+    if (!expected[seriesId] || title!==expected[seriesId]+" ("+unit+")") throw new Error("EIA series identity/units did not match expected weekly source");
+    const rows=parseEiaWeeklyHTML(html,start);
+    if (rows.length<2) throw new Error("EIA weekly history returned fewer than two usable observations");
+    healthOk(health,name,"EIA official weekly history; "+url,rows.at(-1).date);
+    return rows;
+  } catch(err) { healthError(health,name,err.message||err); throw err; }
+}
+
 function summarizeSeries(key, meta, rows) {
   const values = rows.filter(r=>Number.isFinite(Number(r.value))).map(r=>({date:r.date,value:Number(r.value)}));
   if (!values.length) return {key,...meta,status:"unavailable",series:[]};
@@ -200,8 +245,8 @@ async function getFundamentals(request,ctx,days=2200,bypass=false) {
     const health={}; const start=daysAgoISO(days); const indicators={};
     await Promise.all(Object.entries(FUNDAMENTAL_SERIES).map(async([key,meta])=>{
       try {
-        const merged={...meta,cadence:"weekly",source_label:"EIA via FRED"};
-        const item=summarizeSeries(key,merged,await fetchFredSeries(meta.series_id,start,health));
+        const merged={...meta,cadence:"weekly",source_label:"EIA official weekly history",source_url:"https://www.eia.gov/dnav/pet/hist/LeafHandler.ashx?f=W&n=PET&s="+encodeURIComponent(meta.series_id)};
+        const item=summarizeSeries(key,merged,await fetchEiaWeeklySeries(meta.series_id,start,health));
         if (item.status==="ok") {
           const prior=item.series.length>1?item.series.at(-2).value:null;
           item.change_absolute=prior==null?null:item.value-prior;
