@@ -2,12 +2,13 @@
 from __future__ import annotations
 import argparse,csv,hashlib,html,io,json,math,re,statistics,textwrap,urllib.parse,urllib.request,xml.etree.ElementTree as ET
 from datetime import datetime,date,time,timedelta,timezone
+from html.parser import HTMLParser
 from pathlib import Path
 from zoneinfo import ZoneInfo
 CT=ZoneInfo('America/Chicago'); UTC=timezone.utc
 UA='NQ-Intelligence-Firm/2.0 public-source research (henry@tanzeranderson.com)'
 SYMS={'NQ':'NQ=F','ES':'ES=F','RTY':'RTY=F','QQQ':'QQQ','SOXX':'SOXX','VIX':'^VIX','US10Y':'^TNX','DXY':'DX-Y.NYB','NVDA':'NVDA','MSFT':'MSFT','AAPL':'AAPL','AMZN':'AMZN','META':'META','GOOGL':'GOOGL','AVGO':'AVGO','TSLA':'TSLA'}
-FEEDS=[('Federal Reserve','https://www.federalreserve.gov/feeds/press_all.xml'),('BLS','https://www.bls.gov/feed/bls_latest.rss'),('U.S. Treasury','https://home.treasury.gov/news/press-releases/rss'),('SEC','https://www.sec.gov/news/pressreleases.rss'),('CFTC','https://www.cftc.gov/RSS/RSSGP/rssgp.xml')]
+FEEDS=[('Federal Reserve','https://www.federalreserve.gov/feeds/press_all.xml'),('BLS','https://www.bls.gov/feed/bls_latest.rss'),('U.S. Treasury','https://home.treasury.gov/news/press-releases'),('SEC','https://www.sec.gov/news/pressreleases.rss'),('CFTC','https://www.cftc.gov/RSS/RSSGP/rssgp.xml')]
 
 def now(): return datetime.now(UTC)
 def iso(x): return x.astimezone(UTC).isoformat().replace('+00:00','Z') if x else None
@@ -124,7 +125,35 @@ def quote(b,m):
  p=num(m.get('chartPreviousClose')) or num(m.get('previousClose')) or (b[-2]['close'] if len(b)>1 else b[-1]['close']);c=b[-1]['close'];age=max(0,int((now()-b[-1]['ts']).total_seconds()))
  return {'status':'available','price':round(c,4),'change':round(c-p,4),'change_pct':round((c/p-1)*100,3) if p else None,'as_of':iso(b[-1]['ts']),'freshness_seconds':age,'latency_class':'public-delayed-or-indicative','source':'Yahoo Finance public chart','exchange':m.get('exchangeName')}
 
+class TreasuryPressParser(HTMLParser):
+ def __init__(self):
+  super().__init__(); self.items=[]; self.published=None; self.headline=False; self.url=None; self.title=[]
+ def handle_starttag(self,tag,attrs):
+  attrs=dict(attrs)
+  if tag=='time':
+   self.published=None
+   try:self.published=iso(datetime.fromisoformat(attrs.get('datetime','').replace('Z','+00:00')))
+   except (ValueError,TypeError):pass
+  if tag=='h3' and 'featured-stories__headline' in attrs.get('class','').split():
+   self.headline=True;self.url=None;self.title=[]
+  if tag=='a' and self.headline:
+   url=urllib.parse.urljoin('https://home.treasury.gov',attrs.get('href',''))
+   p=urllib.parse.urlparse(url)
+   if p.scheme=='https' and p.netloc=='home.treasury.gov' and p.path.startswith('/news/press-releases/'):self.url=url
+ def handle_data(self,data):
+  if self.headline:self.title.append(data)
+ def handle_endtag(self,tag):
+  if tag=='h3' and self.headline:
+   title=clean(''.join(self.title))
+   if title and self.url and self.published:self.items.append({'title':title,'url':self.url,'publisher':'U.S. Treasury','published':self.published,'kind':'official','authority':1.0})
+   self.headline=False;self.published=None
+def parse_treasury_press(text):
+ parser=TreasuryPressParser();parser.feed(text)
+ if not parser.items:raise RuntimeError('Treasury official press index returned no dated releases')
+ return parser.items[:24]
+
 def rss(name,url):
+ if name=='U.S. Treasury':return parse_treasury_press(get(url,'text/html').decode('utf-8','replace'))
  root=ET.fromstring(get(url,'application/rss+xml,application/xml,text/xml'));out=[]
  for i in root.findall('.//item')[:8]:
   t=clean(i.findtext('title'),240)

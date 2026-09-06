@@ -39,6 +39,9 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Validate official source adapters
+        run: python -m unittest discover -s cloud/nq-intelligence/engine -p 'test_*.py'
+
       - name: Build live public-source intelligence
         shell: bash
         run: |
