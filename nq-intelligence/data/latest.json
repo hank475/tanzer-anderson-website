@@ -3,26 +3,26 @@
     "product": "NQ Intelligence Firm",
     "version": "2.0.0",
     "mode": "LIVE_PUBLIC",
-    "generated_at_utc": "2026-09-22T14:37:19.423618Z",
-    "generated_at_ct": "Tuesday, September 22, 2026 \u00b7 9:37 AM CT",
+    "generated_at_utc": "2026-09-22T15:09:31.803539Z",
+    "generated_at_ct": "Tuesday, September 22, 2026 \u00b7 10:09 AM CT",
     "refresh_target_seconds": 300,
     "internet_connected": true,
     "market_data_class": "public delayed or indicative; not exchange-licensed tick real-time",
     "official_release_class": "internet-live when source is reachable",
     "disclosure": "Public-source decision support only. Verify prices with the trading venue before acting.",
-    "content_sha256": "7412d4806138316f226273ed89b1e413e57e78815330e728c7aa7d0f48439e8c"
+    "content_sha256": "6f0e5e74a18d17f4c279d85e89c89ac50b5f43473d24ee4ea260a580353141b2"
   },
   "director": {
     "bias": "constructive",
     "score": 1,
-    "confidence": 0.88,
+    "confidence": 0.89,
     "regime": {
       "name": "trend-up",
       "structure": "directional",
       "volatility": "normal-volatility",
-      "confidence": 0.72
+      "confidence": 0.73
     },
-    "assessment": "The conditional posture is constructive. The tape is classified as trend-up, with bullish alignment and session inventory above vwap. 8 of 8 tracked megacaps are advancing. Priority is confirmation at mapped liquidity rather than prediction between levels.",
+    "assessment": "The conditional posture is constructive. The tape is classified as trend-up, with bullish alignment and session inventory above vwap. 7 of 8 tracked megacaps are advancing. Priority is confirmation at mapped liquidity rather than prediction between levels.",
     "trade_permission": {
       "state": "CONDITIONAL",
       "blockers": [],
@@ -37,21 +37,21 @@
   "quotes": {
     "NQ": {
       "status": "available",
-      "price": 30958.25,
-      "change": 1511.5,
-      "change_pct": 5.133,
-      "as_of": "2026-09-22T14:27:17Z",
-      "freshness_seconds": 602,
+      "price": 30925.5,
+      "change": 1478.75,
+      "change_pct": 5.022,
+      "as_of": "2026-09-22T14:59:31Z",
+      "freshness_seconds": 601,
       "latency_class": "public-delayed-or-indicative",
       "source": "Yahoo Finance public chart",
       "exchange": "CME"
     },
     "ES": {
       "status": "available",
-      "price": 7834.25,
-      "change": 194.25,
-      "change_pct": 2.543,
-      "as_of": "2026-09-22T14:27:17Z",
+      "price": 7830.0,
+      "change": 190.0,
+      "change_pct": 2.487,
+      "as_of": "2026-09-22T14:59:30Z",
       "freshness_seconds": 602,
       "latency_class": "public-delayed-or-indicative",
       "source": "Yahoo Finance public chart",
@@ -59,21 +59,21 @@
     },
     "RTY": {
       "status": "available",
-      "price": 2914.3999,
-      "change": 38.4999,
-      "change_pct": 1.339,
-      "as_of": "2026-09-22T14:27:19Z",
-      "freshness_seconds": 600,
+      "price": 2905.0,
+      "change": 29.1,
+      "change_pct": 1.012,
+      "as_of": "2026-09-22T14:59:30Z",
+      "freshness_seconds": 602,
       "latency_class": "public-delayed-or-indicative",
       "source": "Yahoo Finance public chart",
       "exchange": "CME"
     },
     "QQQ": {
       "status": "available",
-      "price": 745.56,
-      "change": 41.02,
-      "change_pct": 5.822,
-      "as_of": "2026-09-22T14:37:17Z",
+      "price": 744.84,
+      "change": 40.3,
+      "change_pct": 5.72,
+      "as_of": "2026-09-22T15:09:30Z",
       "freshness_seconds": 2,
       "latency_class": "public-delayed-or-indicative",
       "source": "Yahoo Finance public chart",
@@ -81,43 +81,43 @@
     },
     "SOXX": {
       "status": "available",
-      "price": 566.25,
-      "change": 67.4,
-      "change_pct": 13.511,
-      "as_of": "2026-09-22T14:37:15Z",
-      "freshness_seconds": 5,
+      "price": 564.5,
+      "change": 65.65,
+      "change_pct": 13.16,
+      "as_of": "2026-09-22T15:09:30Z",
+      "freshness_seconds": 3,
       "latency_class": "public-delayed-or-indicative",
       "source": "Yahoo Finance public chart",
       "exchange": "NGM"
     },
     "VIX": {
       "status": "available",
-      "price": 14.42,
-      "change": -3.29,
-      "change_pct": -18.577,
-      "as_of": "2026-09-22T14:22:16Z",
-      "freshness_seconds": 904,
+      "price": 14.43,
+      "change": -3.28,
+      "change_pct": -18.521,
+      "as_of": "2026-09-22T14:54:31Z",
+      "freshness_seconds": 902,
       "latency_class": "public-delayed-or-indicative",
       "source": "Yahoo Finance public chart",
       "exchange": "CXI"
     },
     "US10Y": {
       "status": "available",
-      "price": 4.949,
-      "change": -0.057,
-      "change_pct": -1.139,
-      "as_of": "2026-09-22T14:22:15Z",
-      "freshness_seconds": 905,
+      "price": 4.959,
+      "change": -0.047,
+      "change_pct": -0.939,
+      "as_of": "2026-09-22T14:54:25Z",
+      "freshness_seconds": 908,
       "latency_class": "public-delayed-or-indicative",
       "source": "Yahoo Finance public chart",
       "exchange": "CGI"
     },
     "DXY": {
       "status": "available",
-      "price": 100.505,
-      "change": 0.285,
-      "change_pct": 0.284,
-      "as_of": "2026-09-22T14:27:19Z",
+      "price": 100.567,
+      "change": 0.347,
+      "change_pct": 0.346,
+      "as_of": "2026-09-22T14:59:33Z",
       "freshness_seconds": 601,
       "latency_class": "public-delayed-or-indicative",
       "source": "Yahoo Finance public chart",
@@ -125,10 +125,10 @@
     },
     "NVDA": {
       "status": "available",
-      "price": 228.35,
-      "change": 16.18,
-      "change_pct": 7.626,
-      "as_of": "2026-09-22T14:37:19Z",
+      "price": 228.6,
+      "change": 16.43,
+      "change_pct": 7.744,
+      "as_of": "2026-09-22T15:09:33Z",
       "freshness_seconds": 1,
       "latency_class": "public-delayed-or-indicative",
       "source": "Yahoo Finance public chart",
@@ -136,43 +136,43 @@
     },
     "MSFT": {
       "status": "available",
-      "price": 497.465,
-      "change": 0.345,
-      "change_pct": 0.069,
-      "as_of": "2026-09-22T14:37:19Z",
-      "freshness_seconds": 1,
+      "price": 495.81,
+      "change": -1.31,
+      "change_pct": -0.264,
+      "as_of": "2026-09-22T15:09:32Z",
+      "freshness_seconds": 2,
       "latency_class": "public-delayed-or-indicative",
       "source": "Yahoo Finance public chart",
       "exchange": "NMS"
     },
     "AAPL": {
       "status": "available",
-      "price": 339.59,
-      "change": 8.25,
-      "change_pct": 2.49,
-      "as_of": "2026-09-22T14:37:19Z",
-      "freshness_seconds": 1,
+      "price": 343.34,
+      "change": 12.0,
+      "change_pct": 3.622,
+      "as_of": "2026-09-22T15:09:32Z",
+      "freshness_seconds": 2,
       "latency_class": "public-delayed-or-indicative",
       "source": "Yahoo Finance public chart",
       "exchange": "NMS"
     },
     "AMZN": {
       "status": "available",
-      "price": 257.02,
-      "change": 8.6,
-      "change_pct": 3.462,
-      "as_of": "2026-09-22T14:37:19Z",
-      "freshness_seconds": 1,
+      "price": 255.695,
+      "change": 7.275,
+      "change_pct": 2.929,
+      "as_of": "2026-09-22T15:09:32Z",
+      "freshness_seconds": 3,
       "latency_class": "public-delayed-or-indicative",
       "source": "Yahoo Finance public chart",
       "exchange": "NMS"
     },
     "META": {
       "status": "available",
-      "price": 750.45,
-      "change": 80.21,
-      "change_pct": 11.967,
-      "as_of": "2026-09-22T14:37:19Z",
+      "price": 749.73,
+      "change": 79.49,
+      "change_pct": 11.86,
+      "as_of": "2026-09-22T15:09:34Z",
       "freshness_seconds": 1,
       "latency_class": "public-delayed-or-indicative",
       "source": "Yahoo Finance public chart",
@@ -180,33 +180,33 @@
     },
     "GOOGL": {
       "status": "available",
-      "price": 361.23,
-      "change": 16.25,
-      "change_pct": 4.71,
-      "as_of": "2026-09-22T14:37:19Z",
-      "freshness_seconds": 1,
+      "price": 358.92,
+      "change": 13.94,
+      "change_pct": 4.041,
+      "as_of": "2026-09-22T15:09:33Z",
+      "freshness_seconds": 2,
       "latency_class": "public-delayed-or-indicative",
       "source": "Yahoo Finance public chart",
       "exchange": "NMS"
     },
     "AVGO": {
       "status": "available",
-      "price": 362.83,
-      "change": 23.56,
-      "change_pct": 6.944,
-      "as_of": "2026-09-22T14:37:20Z",
-      "freshness_seconds": 0,
+      "price": 362.1507,
+      "change": 22.8807,
+      "change_pct": 6.744,
+      "as_of": "2026-09-22T15:09:32Z",
+      "freshness_seconds": 3,
       "latency_class": "public-delayed-or-indicative",
       "source": "Yahoo Finance public chart",
       "exchange": "NMS"
     },
     "TSLA": {
       "status": "available",
-      "price": 378.377,
-      "change": 21.797,
-      "change_pct": 6.113,
-      "as_of": "2026-09-22T14:37:19Z",
-      "freshness_seconds": 2,
+      "price": 376.32,
+      "change": 19.74,
+      "change_pct": 5.536,
+      "as_of": "2026-09-22T15:09:33Z",
+      "freshness_seconds": 3,
       "latency_class": "public-delayed-or-indicative",
       "source": "Yahoo Finance public chart",
       "exchange": "NMS"
@@ -216,9 +216,9 @@
     "status": "available",
     "trading_day": "2026-09-22",
     "levels": {
-      "last": 30958.25,
+      "last": 30925.5,
       "session_open": 30780.0,
-      "vwap": 30851.96,
+      "vwap": 30866.96,
       "previous_high": 30862.75,
       "previous_low": 30216.5,
       "previous_close": 30783.5,
@@ -226,24 +226,24 @@
       "overnight_low": 30670.0,
       "opening_range_high": 30945.0,
       "opening_range_low": 30763.5,
-      "week_high": 30983.75,
+      "week_high": 30997.5,
       "week_low": 29945.0,
-      "month_high": 30983.75,
+      "month_high": 30997.5,
       "month_low": 29368.75
     },
     "profile": {
-      "vah": 30959.24,
-      "poc": 30861.19,
-      "val": 30812.17,
+      "vah": 30961.68,
+      "poc": 30941.21,
+      "val": 30818.4,
       "hvn": [
-        30861.19,
-        30890.61,
-        30763.14
+        30941.21,
+        30910.51,
+        30869.57
       ],
       "lvn": [
-        30723.93,
-        30714.12,
-        30694.51
+        30716.05,
+        30859.34,
+        30695.59
       ]
     },
     "pools": [
@@ -252,56 +252,56 @@
         "kind": "equal highs",
         "level": 30791.38,
         "touches": 6,
-        "last_bar": 135
+        "last_bar": 129
       },
       {
         "side": "buy-side",
         "kind": "equal highs",
-        "level": 30900.92,
-        "touches": 3,
-        "last_bar": 29
+        "level": 30897.31,
+        "touches": 4,
+        "last_bar": 23
       },
       {
         "side": "buy-side",
         "kind": "equal highs",
         "level": 30783.25,
         "touches": 2,
-        "last_bar": 142
+        "last_bar": 136
       },
       {
         "side": "buy-side",
         "kind": "equal highs",
         "level": 30845.88,
         "touches": 2,
-        "last_bar": 106
+        "last_bar": 100
       },
       {
         "side": "sell-side",
         "kind": "equal lows",
         "level": 30751.2,
         "touches": 5,
-        "last_bar": 145
+        "last_bar": 139
       },
       {
         "side": "sell-side",
         "kind": "equal lows",
         "level": 30779.67,
         "touches": 3,
-        "last_bar": 123
+        "last_bar": 117
       },
       {
         "side": "sell-side",
         "kind": "equal lows",
         "level": 30764.33,
         "touches": 3,
-        "last_bar": 75
+        "last_bar": 69
       },
       {
         "side": "sell-side",
         "kind": "equal lows",
-        "level": 30868.0,
-        "touches": 3,
-        "last_bar": 16
+        "level": 30868.25,
+        "touches": 2,
+        "last_bar": 10
       },
       {
         "side": "buy-side",
@@ -316,7 +316,7 @@
       {
         "side": "buy-side",
         "kind": "week high",
-        "level": 30983.75
+        "level": 30997.5
       },
       {
         "side": "sell-side",
@@ -351,11 +351,6 @@
     "fair_value_gaps": [
       {
         "type": "bearish",
-        "low": 30813.25,
-        "high": 30814.0
-      },
-      {
-        "type": "bearish",
         "low": 30769.25,
         "high": 30771.0
       },
@@ -378,10 +373,15 @@
         "type": "bullish",
         "low": 30934.25,
         "high": 30938.25
+      },
+      {
+        "type": "bearish",
+        "low": 30949.5,
+        "high": 30954.5
       }
     ],
     "inventory": "above_vwap",
-    "atr_5m_14": 38.71
+    "atr_5m_14": 37.61
   },
   "trendlines": {
     "status": "available",
@@ -390,41 +390,41 @@
         "status": "available",
         "state": "uptrend",
         "event": "inside channel",
-        "slope_points_per_bar": 1.6352,
-        "normalized_slope": 3.041,
-        "quality_r2": 0.318,
-        "center": 30868.67,
-        "upper": 30939.99,
-        "lower": 30797.34,
-        "last": 30958.25,
+        "slope_points_per_bar": 2.0966,
+        "normalized_slope": 4.014,
+        "quality_r2": 0.41,
+        "center": 30899.41,
+        "upper": 30970.52,
+        "lower": 30828.3,
+        "last": 30925.5,
         "bars": 72,
-        "as_of": "2026-09-22T14:27:17Z"
+        "as_of": "2026-09-22T14:59:31Z"
       },
       "15m": {
         "status": "available",
         "state": "downtrend",
         "event": "inside channel",
-        "slope_points_per_bar": -1.089,
-        "normalized_slope": -1.387,
-        "quality_r2": 0.128,
-        "center": 30791.89,
-        "upper": 30840.7,
-        "lower": 30743.09,
-        "last": 30958.25,
+        "slope_points_per_bar": -0.8199,
+        "normalized_slope": -0.954,
+        "quality_r2": 0.066,
+        "center": 30803.37,
+        "upper": 30855.52,
+        "lower": 30751.21,
+        "last": 30925.5,
         "bars": 64,
-        "as_of": "2026-09-22T14:15:00Z"
+        "as_of": "2026-09-22T14:45:00Z"
       },
       "1h": {
         "status": "available",
         "state": "uptrend",
         "event": "inside channel",
-        "slope_points_per_bar": 28.1135,
-        "normalized_slope": 19.219,
-        "quality_r2": 0.905,
-        "center": 31078.39,
-        "upper": 31240.23,
-        "lower": 30916.56,
-        "last": 30958.25,
+        "slope_points_per_bar": 28.03,
+        "normalized_slope": 18.562,
+        "quality_r2": 0.904,
+        "center": 31075.75,
+        "upper": 31239.14,
+        "lower": 30912.35,
+        "last": 30925.5,
         "bars": 48,
         "as_of": "2026-09-22T14:00:00Z"
       },
@@ -432,13 +432,13 @@
         "status": "available",
         "state": "uptrend",
         "event": "inside channel",
-        "slope_points_per_bar": 70.571,
-        "normalized_slope": 9.19,
-        "quality_r2": 0.898,
-        "center": 30902.6,
-        "upper": 31084.35,
-        "lower": 30720.85,
-        "last": 30958.25,
+        "slope_points_per_bar": 70.1827,
+        "normalized_slope": 9.086,
+        "quality_r2": 0.897,
+        "center": 30897.03,
+        "upper": 31076.97,
+        "lower": 30717.09,
+        "last": 30925.5,
         "bars": 22,
         "as_of": "2026-09-22T12:00:00Z"
       },
@@ -446,61 +446,61 @@
         "status": "available",
         "state": "range",
         "event": "inside channel",
-        "slope_points_per_bar": 2.702,
-        "normalized_slope": 0.357,
+        "slope_points_per_bar": 2.6512,
+        "normalized_slope": 0.35,
         "quality_r2": 0.005,
-        "center": 29488.21,
-        "upper": 30212.17,
-        "lower": 28764.25,
-        "last": 30957.25,
+        "center": 29486.19,
+        "upper": 30210.68,
+        "lower": 28761.7,
+        "last": 30926.25,
         "bars": 60,
         "as_of": "2026-09-22T04:00:00Z"
       }
     },
-    "confluence": 0.673,
+    "confluence": 0.706,
     "posture": "bullish alignment",
     "active_breaks": []
   },
   "breadth": {
     "coverage": 8,
-    "advancers": 8,
-    "decliners": 0,
-    "average_change_pct": 5.423,
+    "advancers": 7,
+    "decliners": 1,
+    "average_change_pct": 5.276,
     "dispersion_pct": 3.393,
     "leaders": [
       {
         "symbol": "META",
-        "change_pct": 11.967
+        "change_pct": 11.86
       },
       {
         "symbol": "NVDA",
-        "change_pct": 7.626
+        "change_pct": 7.744
       },
       {
         "symbol": "AVGO",
-        "change_pct": 6.944
+        "change_pct": 6.744
       }
     ],
     "laggards": [
       {
         "symbol": "MSFT",
-        "change_pct": 0.069
-      },
-      {
-        "symbol": "AAPL",
-        "change_pct": 2.49
+        "change_pct": -0.264
       },
       {
         "symbol": "AMZN",
-        "change_pct": 3.462
+        "change_pct": 2.929
+      },
+      {
+        "symbol": "AAPL",
+        "change_pct": 3.622
       }
     ]
   },
   "divergences": [
     {
       "pair": "NQ/DXY",
-      "nq_change_pct": 5.133,
-      "other_change_pct": 0.284,
+      "nq_change_pct": 5.022,
+      "other_change_pct": 0.346,
       "state": "divergent"
     }
   ],
@@ -612,6 +612,16 @@
       "direction_hint": "uncertain"
     },
     {
+      "title": "US yields , rising inflation may push RBI towards rate hike later this year : Deloitte Chief Economist",
+      "url": "http://www.zimbabwestar.com/news/279323117/us-yields-rising-inflation-may-push-rbi-towards-rate-hike-later-this-year-deloitte-chief-economist",
+      "publisher": "zimbabwestar.com",
+      "published": "20260922T144500Z",
+      "kind": "news",
+      "authority": 0.55,
+      "relevance": 0.45,
+      "direction_hint": "uncertain"
+    },
+    {
       "title": "Federal Reserve Board announces termination of enforcement action with SNB Bancshares and Bank of Eufaula",
       "url": "https://www.federalreserve.gov/newsevents/pressreleases/enforcement20260918b.htm",
       "publisher": "Federal Reserve",
@@ -712,6 +722,26 @@
       "direction_hint": "uncertain"
     },
     {
+      "title": "Meta Stock Price Surges as Muse AI Tops App Store Charts",
+      "url": "https://petapixel.com/2026/09/22/metas-stock-price-surges-as-muse-ai-tops-app-store-charts/",
+      "publisher": "petapixel.com",
+      "published": "20260922T144500Z",
+      "kind": "news",
+      "authority": 0.55,
+      "relevance": 0.27,
+      "direction_hint": "uncertain"
+    },
+    {
+      "title": "Next major Halo game being developed by Activision , as Halo Studios all but closes as part of Microsoft Xbox restructuring",
+      "url": "https://www.eurogamer.net/next-halo-game-developer-call-of-duty-stuidio-xbox-restructuring",
+      "publisher": "eurogamer.net",
+      "published": "20260922T144500Z",
+      "kind": "news",
+      "authority": 0.55,
+      "relevance": 0.27,
+      "direction_hint": "uncertain"
+    },
+    {
       "title": "Agencies seek comment on proposed third-party risk management guidance and issue statement on community bank engagement with core service providers",
       "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260911a.htm",
       "publisher": "Federal Reserve",
@@ -780,36 +810,6 @@
       "authority": 1.0,
       "relevance": 0.18,
       "direction_hint": "uncertain"
-    },
-    {
-      "title": "SEC Issues \u201cInnovation Exemption\u201d to Facilitate the Trading of Tokenized NMS Stock and Request for Comment",
-      "url": "https://www.sec.gov/newsroom/press-releases/2026-90-sec-issues-innovation-exemption-facilitate-trading-tokenized-nms-stock-request-comment",
-      "publisher": "SEC",
-      "published": "Thu, 17 Sep 2026 08:55:00 -0400",
-      "kind": "official",
-      "authority": 1.0,
-      "relevance": 0.18,
-      "direction_hint": "uncertain"
-    },
-    {
-      "title": "SEC Proposes Rescission of Shareholder Proposal Rule and Reforms to Proxy Solicitation Process",
-      "url": "https://www.sec.gov/newsroom/press-releases/2026-89-sec-proposes-rescission-shareholder-proposal-rule-reforms-proxy-solicitation-process",
-      "publisher": "SEC",
-      "published": "Wed, 16 Sep 2026 10:00:00 -0400",
-      "kind": "official",
-      "authority": 1.0,
-      "relevance": 0.18,
-      "direction_hint": "uncertain"
-    },
-    {
-      "title": "SEC Grants Exemptive Relief from Certain Inline XBRL Filing or Submission Requirements",
-      "url": "https://www.sec.gov/newsroom/press-releases/2026-88-sec-grants-exemptive-relief-certain-inline-xbrl-filing-or-submission-requirements",
-      "publisher": "SEC",
-      "published": "Mon, 14 Sep 2026 12:47:00 -0400",
-      "kind": "official",
-      "authority": 1.0,
-      "relevance": 0.18,
-      "direction_hint": "uncertain"
     }
   ],
   "scenarios": [
@@ -818,14 +818,14 @@
       "probability": 38,
       "trigger": "Acceptance above 30,916.50",
       "confirmation": "5m close, VWAP hold and QQQ/SOXX participation",
-      "invalidation": "Return below 30,851.96"
+      "invalidation": "Return below 30,866.96"
     },
     {
       "name": "Bearish distribution",
       "probability": 34,
       "trigger": "Acceptance below 30,670.00",
       "confirmation": "Failed reclaim, firm yields/VIX and deteriorating breadth",
-      "invalidation": "Reclaim above 30,851.96"
+      "invalidation": "Reclaim above 30,866.96"
     },
     {
       "name": "Two-way / no-trade",
@@ -839,191 +839,191 @@
     {
       "name": "Regime Transition Classifier",
       "reading": "trend-up",
-      "confidence": 0.72,
-      "as_of": "2026-09-22T14:37:19.423618Z"
+      "confidence": 0.73,
+      "as_of": "2026-09-22T15:09:31.803539Z"
     },
     {
       "name": "Breadth & Leadership Monitor",
-      "reading": "8 up / 0 down",
+      "reading": "7 up / 1 down",
       "confidence": 0.75,
-      "as_of": "2026-09-22T14:37:19.423618Z"
+      "as_of": "2026-09-22T15:09:31.803539Z"
     },
     {
       "name": "Treasury Funding Stress Monitor",
       "reading": "public rates and official communications active",
       "confidence": 0.62,
-      "as_of": "2026-09-22T14:37:19.423618Z"
+      "as_of": "2026-09-22T15:09:31.803539Z"
     },
     {
       "name": "Volatility & Gamma Proxy",
       "reading": "proxy active; no dealer-position claim",
       "confidence": 0.55,
-      "as_of": "2026-09-22T14:37:19.423618Z"
+      "as_of": "2026-09-22T15:09:31.803539Z"
     },
     {
       "name": "Narrative Velocity",
       "reading": "0 high-relevance developments",
       "confidence": 0.7,
-      "as_of": "2026-09-22T14:37:19.423618Z"
+      "as_of": "2026-09-22T15:09:31.803539Z"
     },
     {
       "name": "Freshness Quarantine",
-      "reading": "23/24 sources healthy",
-      "confidence": 0.96,
-      "as_of": "2026-09-22T14:37:19.423618Z"
+      "reading": "24/24 sources healthy",
+      "confidence": 1.0,
+      "as_of": "2026-09-22T15:09:31.803539Z"
     },
     {
       "name": "Cash-Open Auction Playbook",
       "reading": "opening-drive classification ready",
       "confidence": 0.7,
-      "as_of": "2026-09-22T14:37:19.423618Z"
+      "as_of": "2026-09-22T15:09:31.803539Z"
     },
     {
       "name": "Anomaly & Divergence Detector",
       "reading": "1 active divergences",
       "confidence": 0.75,
-      "as_of": "2026-09-22T14:37:19.423618Z"
+      "as_of": "2026-09-22T15:09:31.803539Z"
     },
     {
       "name": "FOMC Language Drift Monitor",
       "reading": "official-language comparison active",
       "confidence": 0.65,
-      "as_of": "2026-09-22T14:37:19.423618Z"
+      "as_of": "2026-09-22T15:09:31.803539Z"
     },
     {
       "name": "Risk Budget & Permission Gate",
       "reading": "fail-closed controls active",
       "confidence": 0.9,
-      "as_of": "2026-09-22T14:37:19.423618Z"
+      "as_of": "2026-09-22T15:09:31.803539Z"
     }
   ],
   "source_health": [
     {
       "name": "Market: NQ",
       "status": "healthy",
-      "as_of": "2026-09-22T14:27:17Z",
+      "as_of": "2026-09-22T14:59:31Z",
       "latency_class": "public-delayed-or-indicative",
-      "item_count": 950,
+      "item_count": 956,
       "error": null
     },
     {
       "name": "Market: ES",
       "status": "healthy",
-      "as_of": "2026-09-22T14:27:17Z",
+      "as_of": "2026-09-22T14:59:30Z",
       "latency_class": "public-delayed-or-indicative",
-      "item_count": 950,
+      "item_count": 956,
       "error": null
     },
     {
       "name": "Market: RTY",
       "status": "healthy",
-      "as_of": "2026-09-22T14:27:19Z",
+      "as_of": "2026-09-22T14:59:30Z",
       "latency_class": "public-delayed-or-indicative",
-      "item_count": 949,
+      "item_count": 955,
       "error": null
     },
     {
       "name": "Market: QQQ",
       "status": "healthy",
-      "as_of": "2026-09-22T14:37:17Z",
+      "as_of": "2026-09-22T15:09:30Z",
       "latency_class": "public-delayed-or-indicative",
-      "item_count": 849,
+      "item_count": 855,
       "error": null
     },
     {
       "name": "Market: SOXX",
       "status": "healthy",
-      "as_of": "2026-09-22T14:37:15Z",
+      "as_of": "2026-09-22T15:09:30Z",
       "latency_class": "public-delayed-or-indicative",
-      "item_count": 849,
+      "item_count": 855,
       "error": null
     },
     {
       "name": "Market: VIX",
       "status": "healthy",
-      "as_of": "2026-09-22T14:22:16Z",
+      "as_of": "2026-09-22T14:54:31Z",
       "latency_class": "public-delayed-or-indicative",
-      "item_count": 711,
+      "item_count": 717,
       "error": null
     },
     {
       "name": "Market: US10Y",
       "status": "healthy",
-      "as_of": "2026-09-22T14:22:15Z",
+      "as_of": "2026-09-22T14:54:25Z",
       "latency_class": "public-delayed-or-indicative",
-      "item_count": 346,
+      "item_count": 352,
       "error": null
     },
     {
       "name": "Market: DXY",
       "status": "healthy",
-      "as_of": "2026-09-22T14:27:19Z",
+      "as_of": "2026-09-22T14:59:33Z",
       "latency_class": "public-delayed-or-indicative",
-      "item_count": 939,
+      "item_count": 945,
       "error": null
     },
     {
       "name": "Market: NVDA",
       "status": "healthy",
-      "as_of": "2026-09-22T14:37:19Z",
+      "as_of": "2026-09-22T15:09:33Z",
       "latency_class": "public-delayed-or-indicative",
-      "item_count": 849,
+      "item_count": 855,
       "error": null
     },
     {
       "name": "Market: MSFT",
       "status": "healthy",
-      "as_of": "2026-09-22T14:37:19Z",
+      "as_of": "2026-09-22T15:09:32Z",
       "latency_class": "public-delayed-or-indicative",
-      "item_count": 847,
+      "item_count": 853,
       "error": null
     },
     {
       "name": "Market: AAPL",
       "status": "healthy",
-      "as_of": "2026-09-22T14:37:19Z",
+      "as_of": "2026-09-22T15:09:32Z",
       "latency_class": "public-delayed-or-indicative",
-      "item_count": 849,
+      "item_count": 855,
       "error": null
     },
     {
       "name": "Market: AMZN",
       "status": "healthy",
-      "as_of": "2026-09-22T14:37:19Z",
+      "as_of": "2026-09-22T15:09:32Z",
       "latency_class": "public-delayed-or-indicative",
-      "item_count": 847,
+      "item_count": 853,
       "error": null
     },
     {
       "name": "Market: META",
       "status": "healthy",
-      "as_of": "2026-09-22T14:37:19Z",
+      "as_of": "2026-09-22T15:09:34Z",
       "latency_class": "public-delayed-or-indicative",
-      "item_count": 849,
+      "item_count": 855,
       "error": null
     },
     {
       "name": "Market: GOOGL",
       "status": "healthy",
-      "as_of": "2026-09-22T14:37:19Z",
+      "as_of": "2026-09-22T15:09:33Z",
       "latency_class": "public-delayed-or-indicative",
-      "item_count": 849,
+      "item_count": 855,
       "error": null
     },
     {
       "name": "Market: AVGO",
       "status": "healthy",
-      "as_of": "2026-09-22T14:37:20Z",
+      "as_of": "2026-09-22T15:09:32Z",
       "latency_class": "public-delayed-or-indicative",
-      "item_count": 847,
+      "item_count": 853,
       "error": null
     },
     {
       "name": "Market: TSLA",
       "status": "healthy",
-      "as_of": "2026-09-22T14:37:19Z",
+      "as_of": "2026-09-22T15:09:33Z",
       "latency_class": "public-delayed-or-indicative",
-      "item_count": 847,
+      "item_count": 853,
       "error": null
     },
     {
@@ -1037,7 +1037,7 @@
     {
       "name": "Federal Reserve",
       "status": "healthy",
-      "as_of": "2026-09-22T14:37:19.423618Z",
+      "as_of": "2026-09-22T15:09:31.803539Z",
       "latency_class": "official-live",
       "item_count": 8,
       "error": null
@@ -1045,7 +1045,7 @@
     {
       "name": "BLS",
       "status": "healthy",
-      "as_of": "2026-09-22T14:37:19.423618Z",
+      "as_of": "2026-09-22T15:09:31.803539Z",
       "latency_class": "official-live",
       "item_count": 1,
       "error": null
@@ -1053,7 +1053,7 @@
     {
       "name": "U.S. Treasury",
       "status": "healthy",
-      "as_of": "2026-09-22T14:37:19.423618Z",
+      "as_of": "2026-09-22T15:09:31.803539Z",
       "latency_class": "official-live",
       "item_count": 10,
       "error": null
@@ -1061,7 +1061,7 @@
     {
       "name": "SEC",
       "status": "healthy",
-      "as_of": "2026-09-22T14:37:19.423618Z",
+      "as_of": "2026-09-22T15:09:31.803539Z",
       "latency_class": "official-live",
       "item_count": 8,
       "error": null
@@ -1069,37 +1069,33 @@
     {
       "name": "CFTC",
       "status": "healthy",
-      "as_of": "2026-09-22T14:37:19.423618Z",
+      "as_of": "2026-09-22T15:09:31.803539Z",
       "latency_class": "official-live",
       "item_count": 8,
       "error": null
     },
     {
       "name": "GDELT news discovery",
-      "status": "unavailable",
-      "as_of": null,
+      "status": "healthy",
+      "as_of": "2026-09-22T15:09:31.803539Z",
       "latency_class": "internet-live",
-      "item_count": 0,
-      "error": "HTTP Error 429: Too Many Requests"
+      "item_count": 24,
+      "error": null
     },
     {
       "name": "BLS release calendar",
       "status": "healthy",
-      "as_of": "2026-09-22T14:37:19.423618Z",
+      "as_of": "2026-09-22T15:09:31.803539Z",
       "latency_class": "official-live",
       "item_count": 12,
       "error": null
     }
   ],
   "data_quality": {
-    "healthy_sources": 23,
+    "healthy_sources": 24,
     "total_sources": 24,
-    "coverage": 0.958,
-    "stale_or_failed": [
-      "GDELT news discovery"
-    ],
-    "errors": [
-      "GDELT: HTTP Error 429: Too Many Requests"
-    ]
+    "coverage": 1.0,
+    "stale_or_failed": [],
+    "errors": []
   }
 }
