@@ -1,0 +1,1 @@
+window.TA_RAAS_CONFIG={checkoutEnabled:false,checkoutAfterClassificationOnly:true,searchStartsAfterPaymentAndAcceptedIntake:true,checkoutLinks:{standard:"",fivePack:"",tenPack:""},intakePath:"/raas/intake/",executivePath:"/executive-search/",contactEndpoint:"/api/contact",contactEmail:"clientservices@tanzeranderson.com"};
