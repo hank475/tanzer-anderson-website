@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Tanzer Anderson and Alder & Rowe Interview Operations recruiting coordinator dashboard prototype.">
+  <meta name="theme-color" content="#0b1f3a">
+  <title>Interview Operations | Tanzer Anderson + Alder & Rowe</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="workspace.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to dashboard</a>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Interview Operations navigation">
+      <div class="brand-block">
+        <p class="brand">Interview Operations</p>
+        <p class="product">Recruiting Coordinator</p>
+      </div>
+      <div class="workspace-control">
+        <label for="workspace-select">Active workspace</label>
+        <select id="workspace-select" aria-describedby="workspace-help">
+          <option value="all">All Workspaces</option>
+          <option value="tanzer">Tanzer Anderson</option>
+          <option value="alder">Alder & Rowe</option>
+        </select>
+        <span id="workspace-help" hidden>Changing the workspace changes the permitted data, sender identity, calendars, templates, reporting, and audit context.</span>
+      </div>
+      <nav class="nav" aria-label="Primary">
+        <button class="nav-item is-active" type="button" data-view="today" aria-current="page"><span>Today</span><small id="nav-today-count">11</small></button>
+        <button class="nav-item" type="button" data-view="interviews"><span>Interviews</span><small id="nav-interview-count">19</small></button>
+        <button class="nav-item" type="button" data-view="availability"><span>Availability</span><small id="nav-availability-count">8</small></button>
+        <button class="nav-item" type="button" data-view="communications"><span>Communications</span><small id="nav-message-count">11</small></button>
+        <button class="nav-item" type="button" data-view="exceptions"><span>Exceptions</span><small class="alert-count" id="nav-exception-count">4</small></button>
+        <button class="nav-item" type="button" data-view="reporting"><span>Reporting</span><small>—</small></button>
+      </nav>
+      <div class="sidebar-footer"><div class="identity-mark" aria-hidden="true">DA</div><div><strong>Destiny Anderson</strong><span>Recruiting Coordinator · Dual workspace</span></div></div>
+    </aside>
+
+    <div class="main-column">
+      <header class="topbar">
+        <button class="menu-button" type="button" aria-label="Open navigation" aria-expanded="false">Menu</button>
+        <div class="topbar-title"><div class="topbar-context"><span class="active-workspace" id="active-workspace">All Workspaces</span><p class="eyebrow">Scheduling, communication, and interview continuity</p></div><h1 id="page-title">Today</h1></div>
+        <div class="topbar-actions"><span class="freshness"><i aria-hidden="true"></i> Synthetic data · Updated now</span><button class="primary-button" type="button" data-action="new-loop">Create interview loop</button></div>
+      </header>
+
+      <main id="main" tabindex="-1">
+        <div class="workspace-lock" role="status"><i aria-hidden="true"></i><div><strong id="workspace-lock-title">All Workspaces triage</strong><span id="workspace-lock-copy">Priorities and counts may be reviewed together. Enter a company workspace before opening sensitive details or taking action.</span></div></div>
+
+        <section class="view is-visible" data-panel="today" aria-labelledby="page-title">
+          <div class="opening-grid">
+            <article class="welcome-card"><div><p class="eyebrow">Wednesday, August 5</p><h2>Good afternoon, Destiny.</h2><p id="welcome-summary">Four items need intervention across two workspaces. Everything else is on schedule.</p></div><button class="text-button" type="button" data-action="open-exceptions">Review exceptions <span aria-hidden="true">→</span></button></article>
+            <article class="priority-card"><p class="eyebrow">Recommended next action</p><h2 id="priority-title">Repair the Fernandez panel conflict.</h2><p id="priority-copy">One interviewer declined the 2:30 PM hold. Two alternate slots preserve the full loop.</p><div class="priority-meta"><span id="priority-deadline">Due 12:45 PM</span><span id="priority-workspace">Tanzer Anderson · High priority</span></div><button class="primary-button light" type="button" data-action="resolve-top">Open rescue plan</button></article>
+          </div>
+
+          <section class="metric-grid" aria-label="Today's operating metrics">
+            <article class="metric-card"><span>Interviews today</span><strong id="metric-interviews">11</strong><small id="metric-interviews-note">9 ready · 2 at risk</small></article>
+            <article class="metric-card"><span>Confirmations pending</span><strong id="metric-confirmations">3</strong><small id="metric-confirmations-note">Next follow-up at 1:00 PM</small></article>
+            <article class="metric-card"><span>Feedback overdue</span><strong id="metric-feedback">4</strong><small id="metric-feedback-note">Oldest: 19 hours</small></article>
+            <article class="metric-card"><span>Human intervention</span><strong id="metric-intervention">4</strong><small id="metric-intervention-note">1 high · 3 medium</small></article>
+          </section>
+
+          <div class="content-grid">
+            <section class="panel schedule-panel" aria-labelledby="schedule-heading"><div class="panel-heading"><div><p class="eyebrow">Operating list</p><h2 id="schedule-heading">Today’s interview flow</h2></div><button class="text-button" type="button" data-action="view-all-interviews">View all</button></div><div class="schedule-list" id="schedule-list"></div></section>
+            <aside class="panel intelligence-panel" aria-labelledby="intelligence-heading"><div class="panel-heading"><div><p class="eyebrow">Intelligence rail</p><h2 id="intelligence-heading">Watchlist</h2></div></div><div class="watch-list" id="watch-list"></div></aside>
+          </div>
+
+          <div class="content-grid lower-grid">
+            <section class="panel" aria-labelledby="communications-heading"><div class="panel-heading"><div><p class="eyebrow">Communications</p><h2 id="communications-heading">Messages requiring action</h2></div><button class="text-button" type="button" data-action="open-communications">Open center</button></div><div class="message-list" id="message-list"></div></section>
+            <section class="panel" aria-labelledby="timeline-heading"><div class="panel-heading"><div><p class="eyebrow">Candidate service</p><h2 id="timeline-heading">Latest journey</h2></div></div><div class="candidate-summary"><div class="identity-mark large" id="journey-initials" aria-hidden="true">NF</div><div><strong id="journey-name">Nelson Fernandez</strong><span id="journey-context">Client introduction · Tanzer Anderson</span><span class="workspace-tag tanzer" id="journey-workspace">Tanzer Anderson</span></div></div><ol class="timeline" id="timeline"></ol></section>
+          </div>
+        </section>
+
+        <section class="view" data-panel="interviews" aria-label="Interviews"><div class="section-intro"><p class="eyebrow">Interview control</p><h2>Every active loop in one place.</h2><p>Track workspace, readiness, participant confirmations, link health, feedback ownership, and the next safe action.</p></div><div class="panel table-panel"><div class="table-wrap"><table><thead><tr><th>Workspace</th><th>Candidate</th><th>Role / purpose</th><th>Stage</th><th>Time</th><th>Readiness</th><th>Next action</th></tr></thead><tbody id="interview-table"></tbody></table></div></div></section>
+
+        <section class="view" data-panel="availability" aria-label="Availability"><div class="section-intro"><p class="eyebrow">Availability</p><h2>Find viable time without the chase.</h2><p>Candidate-local time, working-hour rules, buffers, and free/busy constraints will be isolated by workspace after authorization.</p></div><div class="panel placeholder-panel"><span class="placeholder-number" id="availability-number">08</span><div><h3 id="availability-title">Eight availability requests are pending.</h3><p id="availability-copy">The production version will rank common slots using each company’s calendars and rules, then place tentative holds only after workspace and policy checks pass.</p></div><button class="primary-button" type="button" data-action="send-reminders">Prepare reminders</button></div></section>
+
+        <section class="view" data-panel="communications" aria-label="Communications"><div class="section-intro"><p class="eyebrow">Communications center</p><h2>Approved language, correct identity, one clear action.</h2><p>Each communication carries workspace, sender identity, recipient, purpose, timing commitment, approval status, and delivery state.</p></div><div class="panel table-panel"><div class="table-wrap"><table><thead><tr><th>Workspace</th><th>Recipient</th><th>Purpose</th><th>Commitment</th><th>Approval</th><th>Delivery</th><th>Action</th></tr></thead><tbody id="communications-table"></tbody></table></div></div></section>
+
+        <section class="view" data-panel="exceptions" aria-label="Exceptions"><div class="section-intro"><p class="eyebrow">Exception desk</p><h2>Resolve risk without rebuilding the process.</h2><p>Severity, workspace, affected interview, recommended remedy, safe actions, escalation path, and resolution history stay together.</p></div><div class="exception-grid" id="exception-grid"></div></section>
+
+        <section class="view" data-panel="reporting" aria-label="Reporting"><div class="section-intro"><p class="eyebrow">Decision-useful reporting</p><h2>Measure friction without blending company records.</h2><p>Tanzer Anderson and Alder & Rowe reporting remain independently scoped. The All Workspaces view provides only labeled aggregate operations metrics.</p></div><div class="report-grid"><article class="panel report-card"><span>Average time to confirmed loop</span><strong id="report-time">6.8h</strong><small id="report-time-note">Combined operational view</small><div class="bar"><i id="report-time-bar" style="width:78%"></i></div></article><article class="panel report-card"><span>Reschedule frequency</span><strong id="report-reschedule">9%</strong><small id="report-reschedule-note">Target: under 10%</small><div class="bar"><i id="report-reschedule-bar" style="width:66%"></i></div></article><article class="panel report-card"><span>Feedback within 24 hours</span><strong id="report-feedback">82%</strong><small id="report-feedback-note">Target: 90%</small><div class="bar"><i id="report-feedback-bar" style="width:82%"></i></div></article><article class="panel report-card"><span>Preventable failures</span><strong id="report-failures">1</strong><small id="report-failures-note">Current month · Both workspaces</small><div class="bar"><i id="report-failures-bar" style="width:18%"></i></div></article></div></section>
+      </main>
+    </div>
+  </div>
+
+  <dialog id="action-dialog" aria-labelledby="dialog-title"><form method="dialog"><button class="dialog-close" value="cancel" aria-label="Close">×</button><p class="eyebrow">Prototype action</p><h2 id="dialog-title">Action prepared</h2><p id="dialog-copy">This prototype does not write to Gmail, Calendar, Drive, or company records.</p><div class="dialog-actions"><button class="primary-button" value="confirm">Acknowledge</button></div></form></dialog>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="app.js" defer></script>
+</body>
+</html>
