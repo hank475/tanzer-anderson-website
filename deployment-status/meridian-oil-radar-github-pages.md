@@ -1,6 +1,6 @@
 # Meridian Oil Radar — Hosted Webpage
 
-- Checked at: 2026-11-04T23:36:41Z
+- Checked at: 2026-11-05T03:44:40Z
 - Job status: success
 - Last stage: production-verification
 - Production URL: https://hank475.github.io/tanzer-anderson-website/oil-radar/
@@ -10,7 +10,7 @@
 - Replit required: No
 - External deployment secrets required: No
 - Scheduled refresh cadence: 15 minutes
-- Snapshot generated at: 2026-11-04T23:36:18.712Z
+- Snapshot generated at: 2026-11-05T03:44:07.480Z
 - News intelligence items: 35
 - Available market series: 10
 - Available fundamental series: 6
