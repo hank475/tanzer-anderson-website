@@ -1,8 +1,8 @@
 # Tanzer Anderson Private Trading Ledger — Hosted Browser Release
 
-- Checked at: 2026-11-19T07:17:37Z
+- Checked at: 2026-11-20T07:06:46Z
 - Production URL: https://hank475.github.io/tanzer-anderson-website/trading-journal/
-- Verification source SHA: 19a0f9d117ace7c2c3a45f09ea17f1a7282dc2e2
+- Verification source SHA: 1bf884279e4cd04c46f5091ccca5028f5fc2f91b
 - Hosting: GitHub Pages
 - Browser installation required: No
 - Mac command or local server required: No
